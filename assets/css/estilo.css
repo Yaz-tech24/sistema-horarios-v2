@@ -1,0 +1,484 @@
+/* ============================================================
+   Sistema de Gestão de Horários — FAGRENM / UCM
+   Design system: azul institucional · branco · dourado
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Paleta */
+    --navy-900: #0B1D38;
+    --navy-800: #10294C;
+    --navy-700: #16355F;
+    --navy-500: #2C5288;
+    --navy-100: #E8EEF6;
+    --navy-050: #F3F6FB;
+    --white:    #FDFDFB;
+    --gold-600: #A8861D;
+    --gold-500: #C9A227;
+    --gold-300: #E6C860;
+    --ink:      #1A2433;
+    --ink-soft: #56637A;
+    --line:     #D8E0EC;
+    --danger:   #8C1F1F;
+    --danger-bg:#FBEAEA;
+    --ok:       #1E5C36;
+    --ok-bg:    #E7F3EB;
+
+    /* Tipografia */
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+
+    /* Métricas */
+    --radius: 10px;
+    --shadow: 0 18px 45px -18px rgba(11, 29, 56, .35);
+    --shadow-soft: 0 8px 24px -12px rgba(11, 29, 56, .18);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: 16px; }
+
+body {
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--navy-050);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Assinatura visual: a "régua de horas"
+   Linha dourada com marcas, como uma régua de tempo.
+   ============================================================ */
+.regua {
+    height: 10px;
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0 11px,
+            var(--gold-500) 11px 12px
+        ) bottom / 100% 6px no-repeat,
+        linear-gradient(var(--gold-500), var(--gold-500)) top / 100% 2px no-repeat;
+}
+.regua--clara {
+    background:
+        repeating-linear-gradient(
+            to right,
+            transparent 0 11px,
+            var(--gold-300) 11px 12px
+        ) bottom / 100% 6px no-repeat,
+        linear-gradient(var(--gold-300), var(--gold-300)) top / 100% 2px no-repeat;
+}
+
+/* ============================================================
+   Página de login (ecrã dividido)
+   ============================================================ */
+.login-body {
+    display: grid;
+    grid-template-columns: minmax(380px, 44%) 1fr;
+    min-height: 100vh;
+    background: var(--white);
+}
+
+.login-brand {
+    background:
+        radial-gradient(120% 90% at 15% 0%, var(--navy-700) 0%, var(--navy-800) 45%, var(--navy-900) 100%);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(2rem, 5vw, 4rem);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-brand::after {
+    /* grelha horária fantasma ao fundo */
+    content: "";
+    position: absolute;
+    inset: auto -10% -12% -10%;
+    height: 55%;
+    background:
+        repeating-linear-gradient(to right, rgba(255,255,255,.05) 0 1px, transparent 1px 96px),
+        repeating-linear-gradient(to bottom, rgba(255,255,255,.05) 0 1px, transparent 1px 64px);
+    transform: perspective(600px) rotateX(48deg);
+    transform-origin: top;
+    pointer-events: none;
+}
+
+.brand-topo { position: relative; z-index: 1; }
+
+.monograma {
+    width: 74px;
+    height: 74px;
+    border: 1.5px solid var(--gold-500);
+    outline: 1px solid rgba(201, 162, 39, .35);
+    outline-offset: 5px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.5rem;
+    letter-spacing: .06em;
+    color: var(--gold-300);
+    margin-bottom: 2.2rem;
+}
+
+.brand-eyebrow {
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--gold-300);
+    margin-bottom: .9rem;
+}
+
+.brand-titulo {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.9rem, 3.2vw, 2.7rem);
+    line-height: 1.12;
+    max-width: 14ch;
+    margin-bottom: 1.4rem;
+}
+
+.brand-texto {
+    color: rgba(253, 253, 251, .78);
+    font-size: .95rem;
+    line-height: 1.65;
+    max-width: 40ch;
+}
+
+.brand-rodape {
+    position: relative;
+    z-index: 1;
+    font-size: .78rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(253, 253, 251, .55);
+}
+.brand-rodape .regua--clara { margin-bottom: 1rem; opacity: .9; }
+
+/* Painel do formulário */
+.login-form-painel {
+    display: grid;
+    place-items: center;
+    padding: clamp(2rem, 4vw, 3.5rem);
+}
+
+.login-cartao {
+    width: min(400px, 100%);
+}
+
+.login-cartao .regua { margin-bottom: 2rem; }
+
+.login-cartao h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.7rem;
+    color: var(--navy-800);
+    margin-bottom: .5rem;
+}
+
+.login-cartao .sub {
+    color: var(--ink-soft);
+    font-size: .92rem;
+    margin-bottom: 2rem;
+}
+
+.campo { margin-bottom: 1.15rem; }
+
+.campo label {
+    display: block;
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--navy-700);
+    margin-bottom: .45rem;
+}
+
+.campo input {
+    width: 100%;
+    padding: .8rem .95rem;
+    font: inherit;
+    font-size: .95rem;
+    color: var(--ink);
+    background: var(--white);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius);
+    transition: border-color .18s, box-shadow .18s;
+}
+
+.campo input:focus {
+    outline: none;
+    border-color: var(--gold-500);
+    box-shadow: 0 0 0 3px rgba(201, 162, 39, .22);
+}
+
+.btn {
+    display: inline-block;
+    width: 100%;
+    padding: .85rem 1.2rem;
+    font: inherit;
+    font-size: .95rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--white);
+    background: linear-gradient(180deg, var(--navy-700), var(--navy-800));
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    box-shadow: var(--shadow-soft);
+    transition: transform .15s, box-shadow .15s, background .15s;
+}
+
+.btn:hover  { transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn:active { transform: translateY(0); }
+.btn:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
+
+.login-nota {
+    margin-top: 1.6rem;
+    font-size: .8rem;
+    color: var(--ink-soft);
+    text-align: center;
+}
+
+/* Mensagens */
+.msg {
+    padding: .8rem 1rem;
+    border-radius: var(--radius);
+    font-size: .88rem;
+    margin-bottom: 1.2rem;
+    border: 1px solid transparent;
+}
+.msg--erro { background: var(--danger-bg); color: var(--danger); border-color: #EFC7C7; }
+.msg--ok   { background: var(--ok-bg);     color: var(--ok);     border-color: #BFDECB; }
+
+/* ============================================================
+   Layout interno (páginas autenticadas)
+   ============================================================ */
+.app-header {
+    background: linear-gradient(180deg, var(--navy-800), var(--navy-900));
+    color: var(--white);
+}
+
+.app-header-inner {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: .9rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.app-marca {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    text-decoration: none;
+    color: inherit;
+    margin-right: auto;
+}
+
+.app-marca .mini-monograma {
+    width: 40px;
+    height: 40px;
+    border: 1.5px solid var(--gold-500);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: .9rem;
+    color: var(--gold-300);
+    flex-shrink: 0;
+}
+
+.app-marca .nome {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.02rem;
+    line-height: 1.15;
+}
+.app-marca .nome small {
+    display: block;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: .68rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--gold-300);
+    margin-top: .18rem;
+}
+
+.app-nav { display: flex; gap: .35rem; flex-wrap: wrap; }
+
+.app-nav a {
+    color: rgba(253, 253, 251, .82);
+    text-decoration: none;
+    font-size: .86rem;
+    font-weight: 500;
+    padding: .5rem .85rem;
+    border-radius: 8px;
+    transition: background .15s, color .15s;
+}
+.app-nav a:hover { background: rgba(255, 255, 255, .09); color: var(--white); }
+.app-nav a:focus-visible { outline: 2px solid var(--gold-300); outline-offset: 2px; }
+
+.app-utilizador {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    font-size: .84rem;
+}
+.app-utilizador .perfil-etiqueta {
+    color: var(--gold-300);
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    display: block;
+}
+.app-utilizador a {
+    color: var(--white);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: .84rem;
+    border: 1px solid rgba(255, 255, 255, .35);
+    padding: .45rem .9rem;
+    border-radius: 8px;
+    transition: border-color .15s, background .15s;
+}
+.app-utilizador a:hover { border-color: var(--gold-300); background: rgba(255, 255, 255, .07); }
+
+/* Conteúdo */
+.app-main {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 2.2rem 1.5rem 3.5rem;
+}
+
+.pagina-titulo {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.75rem;
+    color: var(--navy-800);
+    margin-bottom: .4rem;
+}
+.pagina-sub { color: var(--ink-soft); font-size: .93rem; margin-bottom: 1.6rem; }
+.pagina-cabecalho .regua { max-width: 220px; margin-bottom: 1.9rem; }
+
+/* Cartões */
+.cartao {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+    padding: 1.5rem;
+}
+
+.grelha-cartoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.1rem;
+}
+
+.cartao-modulo {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--gold-500);
+    border-radius: var(--radius);
+    padding: 1.3rem 1.35rem 1.2rem;
+    transition: transform .16s, box-shadow .16s, border-color .16s;
+}
+.cartao-modulo:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+    border-color: var(--navy-500);
+    border-top-color: var(--gold-500);
+}
+.cartao-modulo h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.08rem;
+    color: var(--navy-800);
+    margin-bottom: .4rem;
+}
+.cartao-modulo p { font-size: .84rem; color: var(--ink-soft); line-height: 1.5; }
+.cartao-modulo .estado {
+    display: inline-block;
+    margin-top: .8rem;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gold-600);
+}
+
+/* Tabelas */
+.tabela { width: 100%; border-collapse: collapse; background: var(--white); }
+.tabela th {
+    background: var(--navy-800);
+    color: var(--white);
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: .75rem .9rem;
+}
+.tabela td { padding: .7rem .9rem; font-size: .89rem; border-bottom: 1px solid var(--line); }
+.tabela tr:nth-child(even) td { background: var(--navy-050); }
+.tabela tr:hover td { background: var(--navy-100); }
+
+/* Formulários internos */
+.form-linha { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; }
+select, textarea {
+    width: 100%;
+    padding: .75rem .9rem;
+    font: inherit;
+    font-size: .93rem;
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--white);
+}
+select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--gold-500);
+    box-shadow: 0 0 0 3px rgba(201, 162, 39, .22);
+}
+
+/* Rodapé */
+.app-footer {
+    border-top: 1px solid var(--line);
+    background: var(--white);
+}
+.app-footer .regua { max-width: 160px; margin: 0 auto; transform: translateY(-1px); }
+.app-footer-inner {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 1.4rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: .78rem;
+    color: var(--ink-soft);
+}
+
+/* ============================================================
+   Responsivo e acessibilidade
+   ============================================================ */
+@media (max-width: 880px) {
+    .login-body { grid-template-columns: 1fr; }
+    .login-brand { min-height: 38vh; }
+    .app-header-inner { flex-wrap: wrap; gap: .8rem 1.2rem; }
+    .app-marca { margin-right: 0; width: 100%; }
+    .app-footer-inner { flex-direction: column; text-align: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}

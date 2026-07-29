@@ -1,4 +1,15 @@
 <?php
+/* ============================================================
+   Configuração central do projeto
+   — BASE_URL: caminho do projeto dentro do htdocs.
+     Se renomearem a pasta, mudar SÓ aqui.
+   — $pdo: ligação à base de dados (PDO).
+   ============================================================ */
+
+if (!defined('BASE_URL')) {
+    define('BASE_URL', '/sistema-horarios-fagrenm');
+}
+
 $host   = 'localhost';
 $dbname = 'horarios_fagrenm';
 $user   = 'root';

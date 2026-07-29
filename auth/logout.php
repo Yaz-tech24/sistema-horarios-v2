@@ -1,9 +1,8 @@
 <?php
-require '../includes/auth.php';
+require_once __DIR__ . '/../includes/auth.php';
 
-// Limpa todas as variáveis de sessão e termina a sessão
 $_SESSION = [];
 session_destroy();
 
-header('Location: /auth/login.php');
+header('Location: ' . BASE_URL . '/auth/login.php');
 exit;
