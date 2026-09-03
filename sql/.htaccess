@@ -1,0 +1,3 @@
+# Esta pasta nunca deve ser acedida pelo browser — só serve para
+# importar os ficheiros manualmente (phpMyAdmin / mysql CLI).
+Require all denied

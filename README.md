@@ -21,6 +21,71 @@ dessas alterações:
   conta por tentativas de login falhadas (ver "Segurança" abaixo).
 - `sql/migracao_remover_sabado.sql` — restringe os dias letivos a
   Segunda–Sexta (remove Sábado do ENUM `dia_semana`).
+- `sql/migracao_sala_disciplina.sql` — adiciona `disciplinas.sala_id`
+  (laboratório de disciplinas Prática/Laboratorial).
+
+## Hospedagem em produção (VPS)
+
+Testado para uma VPS Ubuntu com Apache — ex.: Hostinger VPS. Os passos:
+
+**1. Servidor** (Ubuntu 22.04+, como root ou via `sudo`):
+```bash
+apt update && apt install -y apache2 php php-mysql php-mbstring mysql-server certbot python3-certbot-apache
+a2enmod headers rewrite
+systemctl enable --now apache2 mysql
+```
+
+**2. Base de dados:**
+```bash
+mysql -u root -p
+```
+```sql
+CREATE DATABASE horarios_fagrenm CHARACTER SET utf8mb4;
+CREATE USER 'horarios_app'@'localhost' IDENTIFIED BY 'uma-password-forte-aqui';
+GRANT ALL PRIVILEGES ON horarios_fagrenm.* TO 'horarios_app'@'localhost';
+FLUSH PRIVILEGES;
+```
+Depois importar (pela ordem): `sql/schema.sql`, `sql/seed.sql`. **Não** importar
+`sql/seed2_contas_teste.sql` em produção — são contas de demonstração com
+passwords públicas (ver README).
+
+**3. Código:**
+```bash
+cd /var/www
+git clone https://github.com/Yaz-tech24/sistema-horarios-v2.git horarios
+cd horarios
+cp .env.example .env
+nano .env   # preencher DB_USER/DB_PASS (os de cima) e deixar BASE_URL vazio
+chown -R www-data:www-data /var/www/horarios
+```
+
+**4. Apache — VirtualHost** (`/etc/apache2/sites-available/horarios.conf`):
+```apache
+<VirtualHost *:80>
+    ServerName horarios.o-teu-dominio.mz
+    DocumentRoot /var/www/horarios
+    <Directory /var/www/horarios>
+        AllowOverride All
+        Require all granted
+    </Directory>
+    ErrorLog ${APACHE_LOG_DIR}/horarios_error.log
+</VirtualHost>
+```
+```bash
+a2ensite horarios.conf && systemctl reload apache2
+certbot --apache -d horarios.o-teu-dominio.mz   # HTTPS automático (Let's Encrypt)
+```
+
+O domínio (`horarios.o-teu-dominio.mz` acima) tem de já apontar para o IP da
+VPS (registo DNS tipo A) antes de correr o `certbot`.
+
+**5. Confirmar:** abrir `https://horarios.o-teu-dominio.mz/auth/login.php` —
+com `.env` presente, `config/db.php` liga à base de dados de produção e
+`display_errors` fica desligado automaticamente (`APP_ENV=producao`).
+
+O `.htaccess` da raiz e de `sql/` já bloqueiam o acesso direto a `.sql`,
+`.env`, `.md`, `.bat`, `.git` e listagem de pastas — não precisas de mais
+nada aí.
 
 ## Contas de teste
 | Perfil        | E-mail                     | Password    |

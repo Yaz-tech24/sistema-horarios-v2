@@ -1,0 +1,21 @@
+# Segurança para produção — nunca servir estes ficheiros/pastas
+# diretamente, mesmo que alguém adivinhe o caminho.
+
+# .env, .sql, .md, .bat, .ini, .log — nada disto é para ser pedido
+# pelo browser; .sql em particular tem a estrutura da base de dados e
+# (em sql/seed2_contas_teste.sql) contas de teste.
+<FilesMatch "\.(env|sql|md|bat|ini|log)$">
+    Require all denied
+</FilesMatch>
+
+# .git — se o repositório for clonado direto para a pasta do site,
+# isto impede descarregar o histórico todo do projeto.
+RedirectMatch 404 /\.git
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+Options -Indexes
