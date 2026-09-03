@@ -1,4 +1,5 @@
 USE horarios_fagrenm;
+SET NAMES utf8mb4;
 
 -- Utilizador Administrador de teste
 -- E-mail: admin@fagrenm.test | Password: admin123
