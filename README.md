@@ -103,6 +103,12 @@ controlo de acesso por curso (não consegue entrar em Direito, AP, etc.).
 - `includes/funcoes_coordenador.php` → `exigirCursoDoCoordenador()` valida
   em TODAS as páginas do coordenador que o curso em sessão lhe pertence;
   se não pertencer, é reenviado para a escolha de curso.
+- O mesmo vale para as **disciplinas**: em `coordenador/disciplinas.php` o
+  `curso_id` vem sempre da sessão (nunca do formulário) e qualquer edição ou
+  eliminação confirma antes que a disciplina é mesmo do curso em sessão — um
+  coordenador não consegue tocar nas disciplinas de um curso que não gere,
+  mesmo forjando o pedido. O Administrador continua a ver e a gerir as de
+  todos os cursos em **Admin → Disciplinas**.
 
 ## Convenções (obrigatórias para todos)
 - `require_once` + `__DIR__` em todos os includes.
@@ -137,9 +143,10 @@ controlo de acesso por curso (não consegue entrar em Direito, AP, etc.).
 ## Módulos
 - **Admin**: cursos, disciplinas, docentes (+disciplinas que leciona),
   salas, turmas, utilizadores/permissões.
-- **Coordenador**: escolher curso (só os seus) → editor de horário em grelha
-  com verificação de conflitos (RN01-RN05) → conflitos/revalidação →
-  publicação (RN15: zero conflitos) → histórico.
+- **Coordenador**: escolher curso (só os seus) → disciplinas do curso
+  (criar/editar, incluindo quem é o docente regente e o assistente) → editor
+  de horário em grelha com verificação de conflitos (RN01-RN05) →
+  conflitos/revalidação → publicação (RN15: zero conflitos) → histórico.
 - **Docente**: horário agregado de todos os cursos + notificações.
 - **Todos os perfis**: **A minha conta** — dados de acesso e alteração da
   própria palavra-passe.

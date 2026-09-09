@@ -24,6 +24,7 @@ $menus = [
     'Coordenador' => [
         ['painel.php', 'grid', 'Visão geral'],
         ['coordenador/escolher_curso.php', 'book', 'Os meus cursos'],
+        ['coordenador/disciplinas.php', 'layers', 'Disciplinas'],
         ['coordenador/editor_horario.php', 'calendar', 'Editor de horário'],
         ['coordenador/conflitos.php', 'alert', 'Conflitos'],
         ['coordenador/publicar.php', 'send', 'Publicar horário'],
