@@ -272,6 +272,11 @@ a { color: inherit; text-decoration: none; }
 .metric-bar:nth-child(even) span { background: var(--cobalt); }
 .metric-bar small { color: #647092; font-size: .65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
 
+/* Pares etiqueta/valor (conta.php, fichas de leitura) */
+.field-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(170px,1fr)); gap: 8px; }
+.field-chip { padding: 9px 11px; background: #EAEFF7; border: 1px solid var(--line); border-radius: 4px; font-size: .72rem; color: var(--ink-soft); }
+.field-chip b { display: block; margin-bottom: 2px; color: var(--ink); font-size: .84rem; font-weight: 600; }
+
 /* Grelha de disponibilidade (admin/docentes.php) */
 .tabela-disponibilidade-scroll { overflow-x: auto; }
 .tabela-disponibilidade { width: 100%; border-collapse: collapse; }

@@ -272,7 +272,21 @@ function gerarHorarioAutomatico(PDO $pdo, array $horario, array $turma, array $c
                 break;
             }
 
-            if (!$alocado) { $naoAlocadas[] = $disc['nome']; break; }
+            if (!$alocado) {
+                // Quando a disciplina tem laboratório fixo (RN16), a causa mais
+                // provável é o laboratório estar ocupado por outro curso nesses
+                // horários — dizê-lo poupa a investigação ao coordenador.
+                $motivo = '';
+                if (!empty($disc['sala_id'])) {
+                    $stmtSala = $pdo->prepare("SELECT nome FROM salas WHERE id = ?");
+                    $stmtSala->execute([$disc['sala_id']]);
+                    if ($nomeSala = $stmtSala->fetchColumn()) {
+                        $motivo = " (o laboratório \"$nomeSala\" está ocupado nos blocos livres desta turma)";
+                    }
+                }
+                $naoAlocadas[] = $disc['nome'] . $motivo;
+                break;
+            }
         }
     }
 

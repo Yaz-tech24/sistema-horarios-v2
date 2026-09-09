@@ -130,6 +130,20 @@ if ($turmaAtual) {
                 'hora_fim'      => $partesBloco[1] ?? '',
             ];
 
+            // RN16 — uma disciplina Prática/Laboratorial com laboratório
+            // próprio (admin/disciplinas.php) decorre sempre nesse laboratório.
+            // A sala é forçada aqui no servidor, sem confiar no que vem do POST:
+            // é isto que garante, em conjunto com a RN02 (sala ocupada, que já
+            // olha para TODOS os cursos e horários não arquivados), que os
+            // laboratórios nunca ficam com duas aulas ao mesmo tempo.
+            $labDaDisciplina = null;
+            if ($aula['tipo_bloco'] === 'Aula' && $aula['disciplina_id']) {
+                $stmtLab = $pdo->prepare("SELECT sala_id FROM disciplinas WHERE id = ?");
+                $stmtLab->execute([$aula['disciplina_id']]);
+                $labDaDisciplina = (int)($stmtLab->fetchColumn() ?: 0) ?: null;
+                if ($labDaDisciplina) { $aula['sala_id'] = $labDaDisciplina; }
+            }
+
             if (!in_array($aula['dia_semana'], DIAS_SEMANA, true) || !isset($blocosValidos[$bloco])) {
                 $erro = "Escolhe o dia e o bloco horário (tem de ser um dos blocos do turno desta turma).";
             } elseif ($aula['tipo_bloco'] === 'Aula' && !$aula['disciplina_id']) {
@@ -422,7 +436,8 @@ require_once __DIR__ . '/../includes/header.php';
                     <?php foreach ($blocosGrelha as [$i,$f]): ?>
                     <option value="<?= $i ?>|<?= $f ?>" <?= ($blocoEdicao === "$i|$f") ? 'selected' : '' ?>><?= $i ?> – <?= $f ?></option>
                     <?php endforeach; ?>
-                </select></div>
+                </select>
+                <small id="f-sala-nota" hidden style="color:var(--ink-soft);font-size:.75rem">Laboratório fixo desta disciplina — a aula fica sempre aqui.</small></div>
             <div class="campo campo-so-aula"><label>Subgrupo (opcional)</label>
                 <input class="form-control" type="text" name="subgrupo" maxlength="10" placeholder="ex.: A ou B" value="<?= htmlspecialchars($edicao['subgrupo'] ?? '') ?>"></div>
             <div class="campo" style="grid-column:1/-1;display:flex;gap:8px">
@@ -528,15 +543,25 @@ require_once __DIR__ . '/../includes/header.php';
             if (select.selectedOptions[0] && select.selectedOptions[0].hidden) { select.value = '0'; }
         }
 
+        var notaSala = document.getElementById('f-sala-nota');
+        function aplicarLabDaDisciplina(salaId) {
+            if (!selSala) { return; }
+            var temLab = !!salaId;
+            if (temLab) { selSala.value = salaId; }
+            selSala.disabled = temLab;   // o servidor força na mesma (RN16)
+            if (notaSala) { notaSala.hidden = !temLab; }
+        }
+
         if (selDisc) {
             selDisc.addEventListener('change', function () {
                 var info = mapaDocentesDisciplina[this.value];
                 if (info) {
                     if (info.regente) { selRegente.value = info.regente; }
                     if (info.assistente) { selAssistente.value = info.assistente; }
-                    // Laboratório da disciplina (admin/disciplinas.php) — só
-                    // sugestão, dá para trocar a seguir sem problema.
-                    if (info.sala && selSala) { selSala.value = info.sala; }
+                    // Laboratório da disciplina (admin/disciplinas.php). O
+                    // servidor força esta sala à mesma (RN16) — aqui é só para
+                    // o coordenador ver logo onde a aula vai ficar.
+                    if (selSala) { aplicarLabDaDisciplina(info.sala); }
                 }
                 var permitidos = mapaDisciplinaDocentes[this.value] || [];
                 filtrarDocentes(selRegente, permitidos);
@@ -545,6 +570,8 @@ require_once __DIR__ . '/../includes/header.php';
             // Estado inicial (ex.: ao entrar em modo de edição já com disciplina escolhida)
             filtrarDocentes(selRegente, mapaDisciplinaDocentes[selDisc.value] || []);
             filtrarDocentes(selAssistente, mapaDisciplinaDocentes[selDisc.value] || []);
+            var infoInicial = mapaDocentesDisciplina[selDisc.value];
+            aplicarLabDaDisciplina(infoInicial ? infoInicial.sala : 0);
         }
 
         // A clicar em "editar" num bloco, a página recarrega com o

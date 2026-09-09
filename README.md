@@ -129,6 +129,10 @@ controlo de acesso por curso (não consegue entrar em Direito, AP, etc.).
   HTTPS (`includes/auth.php`).
 - Login com bloqueio temporário (5 tentativas falhadas → 5 minutos) —
   colunas `tentativas_falhadas`/`bloqueado_ate` em `utilizadores`.
+- Palavra-passe: cada utilizador muda a sua em **A minha conta** (`conta.php`),
+  confirmando sempre a atual. O Administrador pode definir a de qualquer conta
+  em **Utilizadores** (campo vazio = manter a atual). Mínimo 6 caracteres nos
+  dois caminhos.
 
 ## Módulos
 - **Admin**: cursos, disciplinas, docentes (+disciplinas que leciona),
@@ -137,7 +141,23 @@ controlo de acesso por curso (não consegue entrar em Direito, AP, etc.).
   com verificação de conflitos (RN01-RN05) → conflitos/revalidação →
   publicação (RN15: zero conflitos) → histórico.
 - **Docente**: horário agregado de todos os cursos + notificações.
+- **Todos os perfis**: **A minha conta** — dados de acesso e alteração da
+  própria palavra-passe.
 - **Relatórios**: ocupação de salas, carga docente, exportação imprimível.
+
+### RN16 — laboratórios das disciplinas práticas
+Uma disciplina com `tipo_aula` **Prática** ou **Laboratorial** pode ter um
+laboratório fixo (`disciplinas.sala_id`, definido em **Admin → Disciplinas**).
+Quando tem:
+- a geração automática coloca-a sempre nesse laboratório, em vez de escolher
+  sala pela capacidade;
+- o editor manual **força** essa sala no servidor — o campo Sala fica travado
+  e o valor que vier do POST é ignorado (`coordenador/editor_horario.php`);
+- a RN02 (sala ocupada) continua a valer e olha para **todos os cursos e
+  horários não arquivados**, por isso o mesmo laboratório nunca fica com duas
+  aulas à mesma hora, seja de que curso for;
+- se o laboratório estiver ocupado em todos os blocos livres da turma, a
+  disciplina fica por agendar e o resumo da geração diz porquê.
 
 ## Divisão de tarefas original
 - Yazdan — BD, autenticação, layout, design, painel, utilizadores, integração

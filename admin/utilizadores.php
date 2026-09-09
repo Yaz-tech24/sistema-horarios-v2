@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($nome === '' || $email === '' || !in_array($perfil, ['Administrador','Coordenador','Docente'])) {
         $erro = "Preenche o nome, o e-mail e o perfil.";
-    } elseif ($id === 0 && strlen($senha) < 6) {
+    } elseif (($id === 0 || $senha !== '') && strlen($senha) < 6) {
         $erro = "A palavra-passe deve ter pelo menos 6 caracteres.";
     } elseif ($perderiaUltimoAdmin) {
         $erro = "Não é possível mudar o perfil: é o único Administrador ativo.";

@@ -19,6 +19,7 @@ $menus = [
         ['admin/utilizadores.php', 'shield', 'Utilizadores'],
         ['relatorios/carga_docente.php', 'chart', 'Carga docente'],
         ['relatorios/ocupacao_salas.php', 'building', 'Ocupação de salas'],
+        ['conta.php', 'user', 'A minha conta'],
     ],
     'Coordenador' => [
         ['painel.php', 'grid', 'Visão geral'],
@@ -30,11 +31,13 @@ $menus = [
         ['relatorios/carga_docente.php', 'chart', 'Carga docente'],
         ['relatorios/ocupacao_salas.php', 'building', 'Ocupação de salas'],
         ['relatorios/exportar.php', 'download', 'Exportar'],
+        ['conta.php', 'user', 'A minha conta'],
     ],
     'Docente' => [
         ['painel.php', 'grid', 'Visão geral'],
         ['docente/meu_horario.php', 'calendar', 'Meu horário'],
         ['docente/notificacoes.php', 'bell', 'Notificações'],
+        ['conta.php', 'user', 'A minha conta'],
     ],
 ];
 

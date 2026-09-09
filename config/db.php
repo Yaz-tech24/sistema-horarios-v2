@@ -41,13 +41,14 @@ if (!defined('BASE_URL')) {
 }
 
 $host   = getenv('DB_HOST') !== false ? getenv('DB_HOST') : 'localhost';
+$porta  = getenv('DB_PORT') !== false ? (int)getenv('DB_PORT') : 0;
 $dbname = getenv('DB_NAME') !== false ? getenv('DB_NAME') : 'horarios_fagrenm';
 $user   = getenv('DB_USER') !== false ? getenv('DB_USER') : 'root';
 $pass   = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
 
 try {
     $pdo = new PDO(
-        "mysql:host=$host;dbname=$dbname;charset=utf8mb4",
+        "mysql:host=$host" . ($porta ? ";port=$porta" : '') . ";dbname=$dbname;charset=utf8mb4",
         $user,
         $pass
     );
