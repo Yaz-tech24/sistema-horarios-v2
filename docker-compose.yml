@@ -1,0 +1,64 @@
+services:
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+    volumes:
+      - horarios_db_data:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    networks:
+      - horarios
+
+
+  app:
+    build: .
+    restart: unless-stopped
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    environment:
+      APP_ENV: producao
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      BASE_URL: ""
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.horarios.rule=Host(`horarios.studenthub.tech`)"
+      - "traefik.http.routers.horarios.entrypoints=websecure"
+      - "traefik.http.routers.horarios.tls=true"
+      - "traefik.http.routers.horarios.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.horarios.service=horarios"
+      - "traefik.http.services.horarios.loadbalancer.server.port=80"
+
+    networks:
+      - horarios
+
+
+volumes:
+  horarios_db_data:
+
+
+networks:
+  horarios:
+    driver: bridge
