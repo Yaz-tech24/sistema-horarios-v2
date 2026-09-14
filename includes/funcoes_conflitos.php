@@ -157,31 +157,6 @@ function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): 
         }
     }
 
-    // RN05 — Disponibilidade do docente (aviso). Só avisa se NINGUÉM dos
-    // envolvidos está disponível: havendo regente e assistente, basta um
-    // dos dois estar livre para a aula decorrer — não faz sentido avisar
-    // só porque um marcou indisponibilidade se o outro cobre a aula.
-    $docentesEnvolvidos = array_unique(array_filter([$candRegente, $candAssistente]));
-    if ($docentesEnvolvidos) {
-        $marcas = implode(',', array_fill(0, count($docentesEnvolvidos), '?'));
-        $stmt = $pdo->prepare(
-            "SELECT DISTINCT docente_id FROM disponibilidades
-             WHERE docente_id IN ($marcas) AND dia_semana = ? AND disponivel = 0
-               AND hora_inicio < ? AND hora_fim > ?");
-        $stmt->execute([...array_values($docentesEnvolvidos), $aula['dia_semana'],
-                        $aula['hora_fim'], $aula['hora_inicio']]);
-        $indisponiveis = array_column($stmt->fetchAll(), 'docente_id');
-        $todosIndisponiveis = !array_diff($docentesEnvolvidos, $indisponiveis);
-
-        if ($todosIndisponiveis) {
-            $mensagem = count($docentesEnvolvidos) > 1
-                ? "O regente e o assistente indicaram que normalmente não estão disponíveis nesse horário."
-                : "O docente indicou que normalmente não está disponível nesse horário.";
-            $problemas[] = ['tipo' => 'Disponibilidade', 'bloqueante' => false, 'outra_aula_id' => null,
-                'mensagem' => $mensagem];
-        }
-    }
-
     return $problemas;
 }
 

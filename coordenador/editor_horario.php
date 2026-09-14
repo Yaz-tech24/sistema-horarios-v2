@@ -93,6 +93,9 @@ if ($turmaAtual) {
                         "A aula de " . ($a['disc'] ?? 'bloco') . " (" . $a['dia_semana'] . " "
                         . substr($a['hora_inicio'],0,5) . ") foi removida do horário.", false);
                     $pdo->prepare("DELETE FROM conflitos WHERE aula_id_1=? OR aula_id_2=?")->execute([$aid,$aid]);
+                    // Os pedidos dos docentes sobrevivem à aula: perde-se a
+                    // ligação mas o texto de referência mantém-nos legíveis.
+                    $pdo->prepare("UPDATE pedidos SET aula_id=NULL WHERE aula_id=?")->execute([$aid]);
                     $pdo->prepare("DELETE FROM aulas WHERE id=?")->execute([$aid]);
                     registarHistorico($pdo, (int)$horario['id'],
                         "Removida aula de " . ($a['disc'] ?? 'bloco') . " (" . $a['dia_semana'] . ")");

@@ -70,17 +70,6 @@ CREATE TABLE disciplinas (
   FOREIGN KEY (docente_assistente_id) REFERENCES docentes(id)
 );
 
--- Disponibilidade semanal de cada docente
-CREATE TABLE disponibilidades (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  docente_id INT NOT NULL,
-  dia_semana ENUM('Segunda','Terca','Quarta','Quinta','Sexta') NOT NULL,
-  hora_inicio TIME NOT NULL,
-  hora_fim TIME NOT NULL,
-  disponivel TINYINT(1) DEFAULT 0,
-  FOREIGN KEY (docente_id) REFERENCES docentes(id)
-);
-
 -- Que disciplinas cada docente pode lecionar
 CREATE TABLE docente_disciplina (
   docente_id INT NOT NULL,
@@ -134,7 +123,13 @@ CREATE TABLE aulas (
   FOREIGN KEY (docente_id) REFERENCES docentes(id),
   FOREIGN KEY (docente_regente_id) REFERENCES docentes(id),
   FOREIGN KEY (docente_assistente_id) REFERENCES docentes(id),
-  FOREIGN KEY (sala_id) REFERENCES salas(id)
+  FOREIGN KEY (sala_id) REFERENCES salas(id),
+  -- Índices para a deteção de conflitos (procura sempre pelo trio
+  -- dia/hora, uma vez por cada aula do horário) e para os relatórios.
+  INDEX idx_aulas_slot (dia_semana, hora_inicio, hora_fim),
+  INDEX idx_aulas_sala (sala_id),
+  INDEX idx_aulas_regente (docente_regente_id),
+  INDEX idx_aulas_horario (horario_id)
 );
 
 -- Conflitos detetados entre pares de aulas
@@ -145,11 +140,12 @@ CREATE TABLE conflitos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   aula_id_1 INT NOT NULL,
   aula_id_2 INT NOT NULL,
-  tipo ENUM('Docente','Sala','Turma','Capacidade','Disponibilidade','Pastoral','Carga') NOT NULL,
+  tipo ENUM('Docente','Sala','Turma','Capacidade','Pastoral','Carga') NOT NULL,
   estado ENUM('Pendente','Resolvido') DEFAULT 'Pendente',
   detetado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (aula_id_1) REFERENCES aulas(id),
-  FOREIGN KEY (aula_id_2) REFERENCES aulas(id)
+  FOREIGN KEY (aula_id_2) REFERENCES aulas(id),
+  INDEX idx_conflitos_estado (estado)
 );
 
 -- Historico de alteracoes a um horario (auditoria)
@@ -173,6 +169,30 @@ CREATE TABLE notificacoes (
   data_envio DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id),
   FOREIGN KEY (aula_id) REFERENCES aulas(id)
+);
+
+-- Pedidos/observações que o docente envia ao coordenador sobre o seu
+-- horário (ex.: "esta aula choca com outra atividade minha"). É o único
+-- canal de retorno do docente — as notificações só vão no sentido
+-- contrário. `referencia` guarda em texto a aula a que o pedido dizia
+-- respeito, para continuar legível mesmo que essa aula venha a ser
+-- removida (nesse caso aula_id fica NULL).
+CREATE TABLE pedidos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  utilizador_id INT NOT NULL,
+  horario_id INT NOT NULL,
+  aula_id INT NULL,
+  referencia VARCHAR(160) NOT NULL,
+  mensagem VARCHAR(500) NOT NULL,
+  estado ENUM('Aberto','Resolvido') DEFAULT 'Aberto',
+  criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+  resolvido_em DATETIME NULL,
+  resolvido_por INT NULL,
+  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id),
+  FOREIGN KEY (horario_id) REFERENCES horarios(id),
+  FOREIGN KEY (aula_id) REFERENCES aulas(id),
+  FOREIGN KEY (resolvido_por) REFERENCES utilizadores(id),
+  INDEX idx_pedidos_estado (estado)
 );
 
 -- Que coordenador gere qual curso

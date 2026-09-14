@@ -3,7 +3,7 @@
    paleta institucional da UCM (azul + dourado) e tipografia Fraunces/Inter,
    mais os componentes que o mockup não cobria (grelha real com estados de
    conflito/edição, legenda, resumo de geração automática, gráfico de
-   barras, grelha de disponibilidade, folhas de exportação). */
+   barras, folhas de exportação). */
 
 :root {
     --ink: #1A2433;
@@ -277,13 +277,7 @@ a { color: inherit; text-decoration: none; }
 .field-chip { padding: 9px 11px; background: #EAEFF7; border: 1px solid var(--line); border-radius: 4px; font-size: .72rem; color: var(--ink-soft); }
 .field-chip b { display: block; margin-bottom: 2px; color: var(--ink); font-size: .84rem; font-weight: 600; }
 
-/* Grelha de disponibilidade (admin/docentes.php) */
-.tabela-disponibilidade-scroll { overflow-x: auto; }
-.tabela-disponibilidade { width: 100%; border-collapse: collapse; }
-.tabela-disponibilidade th, .tabela-disponibilidade td { padding: 8px 10px; border: 1px solid var(--line); text-align: center; font-size: .72rem; }
-.tabela-disponibilidade th { color: #5d6a86; background: #EAEFF7; font: 600 .65rem "Fraunces",serif; letter-spacing: .05em; text-transform: uppercase; }
-.tabela-disponibilidade td:first-child, .tabela-disponibilidade th:first-child { text-align: left; white-space: nowrap; }
-.tabela-disponibilidade input[type="checkbox"] { width: 16px; height: 16px; }
+/* Listas de seleção múltipla (disciplinas que um docente leciona) */
 .grelha-checkboxes { display: grid; grid-template-columns: repeat(auto-fill,minmax(190px,1fr)); gap: 8px 14px; }
 .grelha-checkboxes label { display: flex; align-items: center; gap: 7px; font-size: .78rem; }
 

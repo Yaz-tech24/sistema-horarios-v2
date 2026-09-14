@@ -9,7 +9,7 @@ $modulos = [
     'Administrador' => [
         ['Cursos', 'Cadastrar e gerir os cursos da faculdade.', '/admin/cursos.php', 'book'],
         ['Disciplinas', 'Disciplinas de cada curso, com carga horária.', '/admin/disciplinas.php', 'layers'],
-        ['Docentes', 'Docentes, categorias e disponibilidade semanal.', '/admin/docentes.php', 'users'],
+        ['Docentes', 'Docentes, categorias e disciplinas que lecionam.', '/admin/docentes.php', 'users'],
         ['Salas', 'Salas, tipos e capacidade.', '/admin/salas.php', 'door'],
         ['Turmas', 'Turmas por curso, ano, regime e turno.', '/admin/turmas.php', 'calendar'],
         ['Utilizadores', 'Contas de acesso e cursos de cada coordenador.', '/admin/utilizadores.php', 'shield'],

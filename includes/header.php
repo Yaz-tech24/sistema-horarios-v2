@@ -17,8 +17,10 @@ $menus = [
         ['admin/salas.php', 'door', 'Salas'],
         ['admin/turmas.php', 'calendar', 'Turmas'],
         ['admin/utilizadores.php', 'shield', 'Utilizadores'],
+        ['admin/conflitos.php', 'alert', 'Conflitos'],
         ['relatorios/carga_docente.php', 'chart', 'Carga docente'],
         ['relatorios/ocupacao_salas.php', 'building', 'Ocupação de salas'],
+        ['relatorios/salas_livres.php', 'door', 'Salas livres'],
         ['conta.php', 'user', 'A minha conta'],
     ],
     'Coordenador' => [
@@ -29,8 +31,10 @@ $menus = [
         ['coordenador/conflitos.php', 'alert', 'Conflitos'],
         ['coordenador/publicar.php', 'send', 'Publicar horário'],
         ['coordenador/historico.php', 'history', 'Histórico'],
+        ['coordenador/pedidos.php', 'mail', 'Pedidos dos docentes'],
         ['relatorios/carga_docente.php', 'chart', 'Carga docente'],
         ['relatorios/ocupacao_salas.php', 'building', 'Ocupação de salas'],
+        ['relatorios/salas_livres.php', 'door', 'Salas livres'],
         ['relatorios/exportar.php', 'download', 'Exportar'],
         ['conta.php', 'user', 'A minha conta'],
     ],
@@ -54,6 +58,16 @@ function navAtivo(string $caminho, string $atual): string
 }
 
 $iniciais = mb_strtoupper(mb_substr($_SESSION['nome'] ?? 'U', 0, 1));
+$pedidosAbertos = 0;
+if ($perfilAtual === 'Coordenador' && !empty($_SESSION['curso_id_atual'])) {
+    $stmtPed = $pdo->prepare("SELECT COUNT(*) FROM pedidos p
+        JOIN horarios h ON p.horario_id = h.id
+        JOIN turmas t ON h.turma_id = t.id
+        WHERE t.curso_id = ? AND p.estado = 'Aberto'");
+    $stmtPed->execute([(int)$_SESSION['curso_id_atual']]);
+    $pedidosAbertos = (int)$stmtPed->fetchColumn();
+}
+
 $notificacoesPorLer = 0;
 if ($perfilAtual === 'Docente') {
     $stmtNotif = $pdo->prepare("SELECT COUNT(*) FROM notificacoes WHERE utilizador_id = ? AND lida = 0");
@@ -93,6 +107,7 @@ if ($perfilAtual === 'Docente') {
                 <a class="nav-item <?= navAtivo($caminho, $caminhoAtual) ?>" href="<?= BASE_URL . '/' . $caminho ?>">
                     <?= icone($ic) ?><span><?= htmlspecialchars($rotulo) ?></span>
                     <?php if ($caminho === 'docente/notificacoes.php' && $notificacoesPorLer > 0): ?><em><?= $notificacoesPorLer ?></em><?php endif; ?>
+                    <?php if ($caminho === 'coordenador/pedidos.php' && $pedidosAbertos > 0): ?><em><?= $pedidosAbertos ?></em><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>

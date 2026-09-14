@@ -21,6 +21,10 @@ dessas alterações:
   conta por tentativas de login falhadas (ver "Segurança" abaixo).
 - `sql/migracao_remover_sabado.sql` — restringe os dias letivos a
   Segunda–Sexta (remove Sábado do ENUM `dia_semana`).
+- `sql/migracao_remover_disponibilidades.sql` — remove a disponibilidade
+  semanal dos docentes (e a RN05) e acrescenta índices ao motor de conflitos.
+- `sql/migracao_pedidos.sql` — cria a tabela `pedidos` (canal de retorno do
+  docente para o coordenador).
 - `sql/migracao_sala_disciplina.sql` — adiciona `disciplinas.sala_id`
   (laboratório de disciplinas Prática/Laboratorial).
 
@@ -142,15 +146,20 @@ controlo de acesso por curso (não consegue entrar em Direito, AP, etc.).
 
 ## Módulos
 - **Admin**: cursos, disciplinas, docentes (+disciplinas que leciona),
+  **conflitos de toda a faculdade** (leitura, agrupados por curso, com
+  revalidação global),
   salas, turmas, utilizadores/permissões.
 - **Coordenador**: escolher curso (só os seus) → disciplinas do curso
   (criar/editar, incluindo quem é o docente regente e o assistente) → editor
-  de horário em grelha com verificação de conflitos (RN01-RN05) →
-  conflitos/revalidação → publicação (RN15: zero conflitos) → histórico.
-- **Docente**: horário agregado de todos os cursos + notificações.
+  de horário em grelha com verificação de conflitos (RN01-RN04) →
+  conflitos/revalidação → publicação (RN15: zero conflitos) → histórico,
+  mais os **pedidos dos docentes** sobre os horários do curso.
+- **Docente**: horário agregado de todos os cursos, notificações e envio de
+  pedidos ao coordenador sobre uma aula concreta.
 - **Todos os perfis**: **A minha conta** — dados de acesso e alteração da
   própria palavra-passe.
-- **Relatórios**: ocupação de salas, carga docente, exportação imprimível.
+- **Relatórios**: ocupação de salas, **salas livres** (grelha semanal de que
+  sala está livre em cada bloco), carga docente, exportação imprimível.
 
 ### RN16 — laboratórios das disciplinas práticas
 Uma disciplina com `tipo_aula` **Prática** ou **Laboratorial** pode ter um
@@ -165,6 +174,22 @@ Quando tem:
   aulas à mesma hora, seja de que curso for;
 - se o laboratório estiver ocupado em todos os blocos livres da turma, a
   disciplina fica por agendar e o resumo da geração diz porquê.
+
+### RN07 — subgrupos
+Uma aula pode ter um **subgrupo** (campo livre no editor, ex.: `T1`, `P2`).
+Duas aulas da mesma turma à mesma hora só são conflito quando têm o *mesmo*
+subgrupo — é isto que permite dividir a turma em turnos práticos. O subgrupo
+aparece entre parênteses na grelha do editor, no horário do docente, na folha
+impressa e na coluna própria do CSV.
+
+### RN05 — removida
+A disponibilidade semanal dos docentes deixou de existir (tabela
+`disponibilidades`, grelha em Admin → Docentes e o aviso correspondente).
+Só o Administrador a podia preencher, docente a docente e bloco a bloco, e o
+aviso que gerava não bloqueava nada — custava trabalho real sem impedir
+erros. Os conflitos que interessam (docente em dois sítios, sala ocupada,
+turma sobreposta) continuam todos, e esses são bloqueantes. Ver
+`sql/migracao_remover_disponibilidades.sql`.
 
 ## Divisão de tarefas original
 - Yazdan — BD, autenticação, layout, design, painel, utilizadores, integração

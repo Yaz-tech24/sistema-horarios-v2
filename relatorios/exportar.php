@@ -140,7 +140,7 @@ function grelhaImpressao(PDO $pdo, array $t): void {
                         <?php foreach (($grelha[$d][$hi] ?? []) as $a): ?>
                             <div class="bloco-grelha <?= $a['tipo_bloco'] === 'Aula' ? 'bloco-aula' : ($a['tipo_bloco'] === 'Estudo_Autonomo' ? 'bloco-estudo' : 'bloco-atividade') ?>">
                             <?php if ($a['tipo_bloco'] === 'Aula'): ?>
-                                <strong><?= htmlspecialchars($a['disciplina'] ?? '—') ?></strong>
+                                <strong><?= htmlspecialchars($a['disciplina'] ?? '—') ?></strong><?= $a['subgrupo'] ? ' <em>(' . htmlspecialchars($a['subgrupo']) . ')</em>' : '' ?>
                                 <small>Regente: <?= htmlspecialchars($a['regente'] ?? $a['docente'] ?? '—') ?><?php if ($a['assistente']): ?> · Assist.: <?= htmlspecialchars($a['assistente']) ?><?php endif; ?></small>
                                 <small><?= htmlspecialchars($a['sala'] ?? '—') ?></small>
                             <?php else: ?>
