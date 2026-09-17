@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $turno    = calcularTurno($ano, $regime);
     $nome     = trim($_POST['nome_turma'] ?? 'A');
     $alunos   = (int)($_POST['num_alunos'] ?? 0);
+    $salaPadrao = (int)($_POST['sala_padrao_id'] ?? 0) ?: null;
     $id       = (int)($_POST['id'] ?? 0);
 
     if ($curso_id <= 0 || $ano < 1 || $ano > 5) {
@@ -61,12 +62,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$bloqueadoPorAulas) {
             if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE turmas SET curso_id=?, ano_curricular=?, regime=?, turno=?, nome_turma=?, num_alunos=? WHERE id=?");
-                $stmt->execute([$curso_id, $ano, $regime, $turno, $nome, $alunos, $id]);
+                $stmt = $pdo->prepare("UPDATE turmas SET curso_id=?, ano_curricular=?, regime=?, turno=?, nome_turma=?, num_alunos=?, sala_padrao_id=? WHERE id=?");
+                $stmt->execute([$curso_id, $ano, $regime, $turno, $nome, $alunos, $salaPadrao, $id]);
                 definirFlash('ok', 'Turma atualizada.');
             } else {
-                $stmt = $pdo->prepare("INSERT INTO turmas (curso_id, ano_curricular, regime, turno, nome_turma, num_alunos) VALUES (?,?,?,?,?,?)");
-                $stmt->execute([$curso_id, $ano, $regime, $turno, $nome, $alunos]);
+                $stmt = $pdo->prepare("INSERT INTO turmas (curso_id, ano_curricular, regime, turno, nome_turma, num_alunos, sala_padrao_id) VALUES (?,?,?,?,?,?,?)");
+                $stmt->execute([$curso_id, $ano, $regime, $turno, $nome, $alunos, $salaPadrao]);
                 definirFlash('ok', 'Turma criada.');
             }
             header('Location: turmas.php'); exit;
@@ -83,8 +84,11 @@ if (isset($_GET['editar'])) {
 if ($f = lerFlash()) { ${$f['tipo']} = $f['texto']; }
 
 $cursos = $pdo->query("SELECT * FROM cursos ORDER BY nome")->fetchAll();
+$salas = $pdo->query("SELECT * FROM salas ORDER BY nome")->fetchAll();
 $turmas = $pdo->query(
-    "SELECT t.*, c.sigla FROM turmas t JOIN cursos c ON t.curso_id=c.id
+    "SELECT t.*, c.sigla, s.nome AS sala_padrao_nome FROM turmas t
+     JOIN cursos c ON t.curso_id=c.id
+     LEFT JOIN salas s ON t.sala_padrao_id = s.id
      ORDER BY c.sigla, t.ano_curricular, t.regime")->fetchAll();
 
 $pageTitle = 'Turmas';
@@ -128,9 +132,20 @@ require_once __DIR__ . '/../includes/header.php';
                 <input class="form-control" type="text" name="nome_turma" maxlength="10" value="<?= htmlspecialchars($editar['nome_turma'] ?? 'A') ?>"></div>
             <div class="campo"><label>Nº alunos</label>
                 <input class="form-control" type="number" name="num_alunos" min="0" value="<?= $editar['num_alunos'] ?? 0 ?>"></div>
+            <div class="campo"><label>Sala habitual (opcional)</label>
+                <select class="form-control form-select" name="sala_padrao_id">
+                    <option value="0">— sem sala fixa —</option>
+                    <?php foreach ($salas as $s): ?>
+                    <option value="<?= $s['id'] ?>" <?= (($editar['sala_padrao_id'] ?? 0) == $s['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($s['nome']) ?> (<?= $s['capacidade'] ?> lug.)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <p style="grid-column:1/-1;margin:0;color:var(--ink-soft);font-size:.78rem;">
                 Laboral: 1º/3º → Manhã, 2º/4º → Tarde. Pós-Laboral: sempre Noite.
                 Se a turma já tiver aulas marcadas, mudar o turno fica bloqueado.
+                A sala habitual é só sugestão para a geração automática — o laboratório
+                de uma disciplina prática (RN16) continua a ter prioridade.
             </p>
             <div class="campo" style="grid-column:1/-1">
                 <button type="submit" class="btn btn-primary" style="width:auto;padding-inline:2rem"><?= $editar ? 'Atualizar' : 'Guardar' ?></button>
@@ -152,7 +167,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="data-table-wrap">
         <table class="data-table" id="tabela-turmas">
-            <thead><tr><th>Curso</th><th>Ano</th><th>Regime</th><th>Turno</th><th>Turma</th><th>Alunos</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Curso</th><th>Ano</th><th>Regime</th><th>Turno</th><th>Turma</th><th>Alunos</th><th>Sala habitual</th><th>Ações</th></tr></thead>
             <tbody>
             <?php foreach ($turmas as $t): ?>
             <tr>
@@ -162,6 +177,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <td><?= htmlspecialchars($t['turno']) ?></td>
                 <td><?= htmlspecialchars($t['nome_turma']) ?></td>
                 <td><?= $t['num_alunos'] ?></td>
+                <td><?= $t['sala_padrao_nome'] ? htmlspecialchars($t['sala_padrao_nome']) : '—' ?></td>
                 <td>
                     <div class="actions">
                         <a class="btn btn-secondary btn-icon" title="Editar" href="?editar=<?= $t['id'] ?>"><?= icone('edit', 16) ?></a>

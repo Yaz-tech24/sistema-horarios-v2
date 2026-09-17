@@ -88,7 +88,12 @@ CREATE TABLE turmas (
   turno ENUM('Manha','Tarde','Noite') NOT NULL,
   nome_turma VARCHAR(10) DEFAULT 'A',
   num_alunos INT DEFAULT 0,
-  FOREIGN KEY (curso_id) REFERENCES cursos(id)
+  -- Sala habitual desta turma (aulas teóricas) — sugestão usada pela
+  -- geração automática quando a disciplina não tem laboratório próprio
+  -- (RN16 continua a ter prioridade). Nunca obrigatório.
+  sala_padrao_id INT NULL,
+  FOREIGN KEY (curso_id) REFERENCES cursos(id),
+  FOREIGN KEY (sala_padrao_id) REFERENCES salas(id)
 );
 
 -- Um horario = o "documento" com estado, ligado a uma turma

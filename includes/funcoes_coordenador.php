@@ -231,6 +231,11 @@ function gerarHorarioAutomatico(PDO $pdo, array $horario, array $turma, array $c
                     // (admin/disciplinas.php) — usa-o em vez da escolha por
                     // capacidade, é a sala onde a disciplina costuma decorrer.
                     $salaId = $disc['sala_id'];
+                } elseif (!empty($turma['sala_padrao_id'])) {
+                    // Sem laboratório específico — usa a sala habitual desta
+                    // turma (ver admin/turmas.php), em vez de escolher só por
+                    // capacidade.
+                    $salaId = $turma['sala_padrao_id'];
                 } else {
                     $salaId = null;
                     foreach ($salas as $s) {
