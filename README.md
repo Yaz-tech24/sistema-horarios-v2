@@ -6,12 +6,23 @@ Sistema completo em PHP + MySQL — todos os módulos funcionais.
 1. Importar `sql/schema.sql` no phpMyAdmin.
 2. Importar `sql/seed.sql`.
 3. Importar `sql/seed2_contas_teste.sql` (contas de teste + dados de exemplo).
+4. Importar `sql/seed3_dados_reais.sql` (cursos, salas, turmas, disciplinas e
+   docentes reais da faculdade — ver "Dados reais" abaixo).
+
+Se importares pela linha de comandos em vez do phpMyAdmin, usa sempre
+`--default-character-set=utf8mb4`:
+```bash
+mysql --default-character-set=utf8mb4 -u root -p horarios_fagrenm < sql/schema.sql
+```
+Sem isto, o cliente `mysql` troca o charset por omissão da ligação e todos os
+nomes com acentos ficam corrompidos ao gravar (ex.: "Ética" vira "├ëtica") —
+o phpMyAdmin já trata disto sozinho, só a linha de comandos precisa da flag.
 
 Depois de configurada a base de dados, corre `iniciar_sistema.bat` (raiz do
 projeto) para ligar o Apache/MySQL do XAMPP e abrir o sistema no browser
 automaticamente.
 
-Instalação de raiz (os 3 passos acima, numa base de dados nova) já fica com
+Instalação de raiz (os 4 passos acima, numa base de dados nova) já fica com
 tudo o que os ficheiros de migração abaixo adicionam — **não** precisas de
 os correr. Eles só existem para quem já tinha a base de dados criada antes
 dessas alterações:
@@ -27,6 +38,28 @@ dessas alterações:
   docente para o coordenador).
 - `sql/migracao_sala_disciplina.sql` — adiciona `disciplinas.sala_id`
   (laboratório de disciplinas Prática/Laboratorial).
+- `sql/migracao_sala_padrao_turma.sql` — adiciona `turmas.sala_padrao_id`
+  (sala habitual da turma, ver "Dados reais" abaixo).
+
+## Dados reais
+`sql/seed3_dados_reais.sql` povoa o sistema com os cursos, salas, turmas,
+disciplinas e docentes reais da faculdade (Tecnologias de Informação,
+Contabilidade e Auditoria, Gestão de Recursos Humanos, Direito, Economia e
+Gestão, Administração Pública, Gestão Ambiental). É idempotente — procura
+tudo por nome antes de inserir, corrê-lo mais do que uma vez não duplica
+nada.
+
+Duas notas sobre a proveniência dos dados:
+- Ficaram de fora dois conjuntos que as próprias fichas originais indicavam
+  como desatualizados: "Administração e Gestão Hospitalar" (2016) e uma
+  ficha antiga de Gestão de Recursos Humanos (2016). O 2º ano de GRH também
+  ficou sem disciplinas — a ficha fornecida não permitia lê-las com confiança.
+- Nomes de sala e de docente foram normalizados quando eram claramente a
+  mesma pessoa/sala escrita de forma diferente em fichas de departamentos
+  diferentes (ex.: "S. André"/"Sto. André"/"Santa André" → "Santo André").
+  Capacidade das salas e número de alunos por turma não vinham nas fichas —
+  ficaram com valores por omissão (50 lugares, 45 alunos), ajustáveis em
+  **Admin → Salas** / **Admin → Turmas**.
 
 ## Hospedagem em produção (VPS)
 
@@ -49,9 +82,11 @@ CREATE USER 'horarios_app'@'localhost' IDENTIFIED BY 'uma-password-forte-aqui';
 GRANT ALL PRIVILEGES ON horarios_fagrenm.* TO 'horarios_app'@'localhost';
 FLUSH PRIVILEGES;
 ```
-Depois importar (pela ordem): `sql/schema.sql`, `sql/seed.sql`. **Não** importar
-`sql/seed2_contas_teste.sql` em produção — são contas de demonstração com
-passwords públicas (ver README).
+Depois importar (pela ordem, sempre com `--default-character-set=utf8mb4` —
+ver "Configuração local" acima): `sql/schema.sql`, `sql/seed.sql`,
+`sql/seed3_dados_reais.sql`. **Não** importar `sql/seed2_contas_teste.sql`
+em produção — são contas de demonstração com passwords públicas (ver
+README).
 
 **3. Código:**
 ```bash

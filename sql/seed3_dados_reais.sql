@@ -274,6 +274,10 @@ FROM cursos c WHERE c.sigla = 'GA'
 UPDATE turmas t JOIN cursos c ON c.id = t.curso_id SET t.sala_padrao_id = (SELECT id FROM salas WHERE nome = 'Santo Pedro')
 WHERE c.sigla = 'GA' AND t.ano_curricular = 3 AND t.regime = 'Laboral' AND t.nome_turma = 'A' AND t.sala_padrao_id IS NULL;
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jean Muhire', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jean Muhire');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Fundamentos de Programação', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jean Muhire'), NULL
 FROM cursos c WHERE c.sigla = 'IT'
@@ -283,6 +287,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'IT' AND d.nome = 'Fundamentos de Programação' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Elizete Macie', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Elizete Macie');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Fundamentos de Rede', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Elizete Macie'), NULL
@@ -294,6 +302,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'IT' AND d.nome = 'Fundamentos de Rede' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Danilo Richards', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Danilo Richards');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Edson Rodolfo', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Edson Rodolfo');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Plataforma de Hardware e Software', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Danilo Richards'), (SELECT id FROM docentes WHERE nome = 'Edson Rodolfo')
 FROM cursos c WHERE c.sigla = 'IT'
@@ -303,6 +319,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Edson Rodolfo'))
 WHERE c.sigla = 'IT' AND d.nome = 'Plataforma de Hardware e Software' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Longo Chuva', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Longo Chuva');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Habilidades de Vida, SSR, HIV/SIDA', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Longo Chuva'), NULL
@@ -314,6 +334,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'IT' AND d.nome = 'Habilidades de Vida, SSR, HIV/SIDA' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Vicente Mpanda', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Vicente Mpanda');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Inglês II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Vicente Mpanda'), NULL
 FROM cursos c WHERE c.sigla = 'IT'
@@ -323,6 +347,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'IT' AND d.nome = 'Inglês II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Elizete Macie', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Elizete Macie');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Edson Rodolfo', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Edson Rodolfo');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Administração e Manutenção de Sistema', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Elizete Macie'), (SELECT id FROM docentes WHERE nome = 'Edson Rodolfo')
@@ -334,6 +366,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'IT' AND d.nome = 'Administração e Manutenção de Sistema' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jean Muhire', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jean Muhire');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Programação Orientada para Objectos', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jean Muhire'), NULL
 FROM cursos c WHERE c.sigla = 'IT'
@@ -343,6 +379,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'IT' AND d.nome = 'Programação Orientada para Objectos' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Mário Pires', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Mário Pires');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Implementação e Base de Dados', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Mário Pires'), NULL
@@ -354,6 +394,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'IT' AND d.nome = 'Implementação e Base de Dados' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Elizete Macie', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Elizete Macie');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Estudos Avançados de Rede', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Elizete Macie'), NULL
 FROM cursos c WHERE c.sigla = 'IT'
@@ -363,6 +407,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'IT' AND d.nome = 'Estudos Avançados de Rede' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Daniel Jariosse', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Daniel Jariosse');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Inglês IV', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Daniel Jariosse'), NULL
@@ -374,6 +422,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'IT' AND d.nome = 'Inglês IV' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Elton Laissone', 'Padre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Elton Laissone');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Fundamentos de Teologia Católica', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Elton Laissone'), NULL
 FROM cursos c WHERE c.sigla = 'IT'
@@ -383,6 +435,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'IT' AND d.nome = 'Fundamentos de Teologia Católica' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Elizete Macie', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Elizete Macie');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'António Almoço', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'António Almoço');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Administração de Serviços de Rede', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Elizete Macie'), (SELECT id FROM docentes WHERE nome = 'António Almoço')
@@ -394,6 +454,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'IT' AND d.nome = 'Administração de Serviços de Rede' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Danilo Richards', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Danilo Richards');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Márcio Chin', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Márcio Chin');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Gestão de Serviço de TI', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Danilo Richards'), (SELECT id FROM docentes WHERE nome = 'Márcio Chin')
 FROM cursos c WHERE c.sigla = 'IT'
@@ -403,6 +471,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Márcio Chin'))
 WHERE c.sigla = 'IT' AND d.nome = 'Gestão de Serviço de TI' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jean Muhire', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jean Muhire');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Edilson Malate', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Edilson Malate');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Programação Móvel', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jean Muhire'), (SELECT id FROM docentes WHERE nome = 'Edilson Malate')
@@ -414,6 +490,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'IT' AND d.nome = 'Programação Móvel' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Danilo Richards', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Danilo Richards');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Edson Rodolfo', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Edson Rodolfo');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Programação Visual', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Danilo Richards'), (SELECT id FROM docentes WHERE nome = 'Edson Rodolfo')
 FROM cursos c WHERE c.sigla = 'IT'
@@ -423,6 +507,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Edson Rodolfo'))
 WHERE c.sigla = 'IT' AND d.nome = 'Programação Visual' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Alex Chihururu', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Alex Chihururu');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Práticas em IT', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Alex Chihururu'), NULL
@@ -434,6 +522,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'IT' AND d.nome = 'Práticas em IT' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Elizete Macie', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Elizete Macie');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ética Profissional para TI', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Elizete Macie'), NULL
 FROM cursos c WHERE c.sigla = 'IT'
@@ -443,6 +535,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'IT' AND d.nome = 'Ética Profissional para TI' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jorge Camisola', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jorge Camisola');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Matemática II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jorge Camisola'), NULL
@@ -454,6 +550,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'CA' AND d.nome = 'Matemática II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Virgílio de Arimateia', 'Padre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Virgílio de Arimateia');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ética Geral', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Virgílio de Arimateia'), NULL
 FROM cursos c WHERE c.sigla = 'CA'
@@ -463,6 +563,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'CA' AND d.nome = 'Ética Geral' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Sérgio Baptista', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Sérgio Baptista');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Comercial', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Sérgio Baptista'), NULL
@@ -474,6 +578,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'CA' AND d.nome = 'Direito Comercial' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Vicente Mpanda', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Vicente Mpanda');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Inglês Técnico Para Contabilistas', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Vicente Mpanda'), NULL
 FROM cursos c WHERE c.sigla = 'CA'
@@ -483,6 +591,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'CA' AND d.nome = 'Inglês Técnico Para Contabilistas' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Anussa Mirasse', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Anussa Mirasse');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Contabilidade Financeira II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Anussa Mirasse'), NULL
@@ -494,6 +606,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'CA' AND d.nome = 'Contabilidade Financeira II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'António Alfinar', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'António Alfinar');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Técnica de Expressão', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'António Alfinar'), NULL
 FROM cursos c WHERE c.sigla = 'CA'
@@ -503,6 +619,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'CA' AND d.nome = 'Técnica de Expressão' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'José Sarmento', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'José Sarmento');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Contabilidade Financeira IV', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'José Sarmento'), NULL
@@ -514,6 +634,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'CA' AND d.nome = 'Contabilidade Financeira IV' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Anselmo Pedro', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Anselmo Pedro');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Cálculo Financeiro II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Anselmo Pedro'), NULL
 FROM cursos c WHERE c.sigla = 'CA'
@@ -523,6 +647,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'CA' AND d.nome = 'Cálculo Financeiro II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Andissene Andissene', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Andissene Andissene');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Estatística II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Andissene Andissene'), NULL
@@ -534,6 +662,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'CA' AND d.nome = 'Estatística II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Noivado Beula', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Noivado Beula');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Investigação Operacional I', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Noivado Beula'), NULL
 FROM cursos c WHERE c.sigla = 'CA'
@@ -543,6 +675,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'CA' AND d.nome = 'Investigação Operacional I' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Carlos Dezembro', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Carlos Dezembro');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Félquer Diogo', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Félquer Diogo');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Contabilidade de Custos II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Carlos Dezembro'), (SELECT id FROM docentes WHERE nome = 'Félquer Diogo')
@@ -554,6 +694,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'CA' AND d.nome = 'Contabilidade de Custos II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'José Sarmento', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'José Sarmento');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Gestão Financeira II', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'José Sarmento'), NULL
 FROM cursos c WHERE c.sigla = 'CA'
@@ -563,6 +707,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'CA' AND d.nome = 'Gestão Financeira II' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Carlos Dezembro', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Carlos Dezembro');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Fiscalidade', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Carlos Dezembro'), NULL
@@ -574,6 +722,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'CA' AND d.nome = 'Fiscalidade' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Carla Semente', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Carla Semente');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Simulação Empresarial I', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Carla Semente'), NULL
 FROM cursos c WHERE c.sigla = 'CA'
@@ -583,6 +735,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'CA' AND d.nome = 'Simulação Empresarial I' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Anussa Mirasse', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Anussa Mirasse');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Auditoria Financeira II', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Anussa Mirasse'), NULL
@@ -594,6 +750,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'CA' AND d.nome = 'Auditoria Financeira II' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'José Sarmento', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'José Sarmento');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Félquer Diogo', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Félquer Diogo');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Contabilidade Internacional', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'José Sarmento'), (SELECT id FROM docentes WHERE nome = 'Félquer Diogo')
 FROM cursos c WHERE c.sigla = 'CA'
@@ -603,6 +767,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Félquer Diogo'))
 WHERE c.sigla = 'CA' AND d.nome = 'Contabilidade Internacional' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Vicente Mpanda', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Vicente Mpanda');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Inglês Geral II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Vicente Mpanda'), NULL
@@ -614,6 +782,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GRH' AND d.nome = 'Inglês Geral II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Palvina Nhambi', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Palvina Nhambi');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Téc. de Exp. e Comunicação', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Palvina Nhambi'), NULL
 FROM cursos c WHERE c.sigla = 'GRH'
@@ -623,6 +795,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GRH' AND d.nome = 'Téc. de Exp. e Comunicação' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Longo Chuva', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Longo Chuva');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Princípios de Marketing', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Longo Chuva'), NULL
@@ -634,6 +810,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GRH' AND d.nome = 'Princípios de Marketing' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Virgílio de Arimateia', 'Padre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Virgílio de Arimateia');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ética Geral', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Virgílio de Arimateia'), NULL
 FROM cursos c WHERE c.sigla = 'GRH'
@@ -643,6 +823,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GRH' AND d.nome = 'Ética Geral' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Brito Taimo', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Brito Taimo');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Introdução a Gest. dos RH', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Brito Taimo'), NULL
@@ -654,6 +838,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GRH' AND d.nome = 'Introdução a Gest. dos RH' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Sérgio Baptista', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Sérgio Baptista');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Noções de Direito', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Sérgio Baptista'), NULL
 FROM cursos c WHERE c.sigla = 'GRH'
@@ -663,6 +851,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GRH' AND d.nome = 'Noções de Direito' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Brito Taimo', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Brito Taimo');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Adm. de Cargo e Remuneração', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Brito Taimo'), NULL
@@ -674,6 +866,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GRH' AND d.nome = 'Adm. de Cargo e Remuneração' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Nixon Manuel', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Nixon Manuel');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Diagnóstico e Mudança Organizacional', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Nixon Manuel'), NULL
 FROM cursos c WHERE c.sigla = 'GRH'
@@ -683,6 +879,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GRH' AND d.nome = 'Diagnóstico e Mudança Organizacional' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Alfatílio Húo', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Alfatílio Húo');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Hig. e Segurança no Trabalho', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Alfatílio Húo'), NULL
@@ -694,6 +894,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GRH' AND d.nome = 'Hig. e Segurança no Trabalho' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Carla Semente', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Carla Semente');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Psicologia de Trabalho', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Carla Semente'), NULL
 FROM cursos c WHERE c.sigla = 'GRH'
@@ -703,6 +907,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GRH' AND d.nome = 'Psicologia de Trabalho' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'José Sarmento', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'José Sarmento');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Anussa Mirasse', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Anussa Mirasse');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Proj. de Simulação Empresarial I', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'José Sarmento'), (SELECT id FROM docentes WHERE nome = 'Anussa Mirasse')
@@ -714,6 +926,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GRH' AND d.nome = 'Proj. de Simulação Empresarial I' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Eloi Gilmar', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Eloi Gilmar');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Domingos Adany', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Domingos Adany');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Introdução ao Estudo de Direito II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Eloi Gilmar'), (SELECT id FROM docentes WHERE nome = 'Domingos Adany')
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -723,6 +943,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Domingos Adany'))
 WHERE c.sigla = 'DIR' AND d.nome = 'Introdução ao Estudo de Direito II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jacques Kazadi', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jacques Kazadi');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Ernesto Camacho', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Ernesto Camacho');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Constitucional II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jacques Kazadi'), (SELECT id FROM docentes WHERE nome = 'Ernesto Camacho')
@@ -734,6 +962,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito Constitucional II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jacques Kazadi', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jacques Kazadi');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Ernesto Camacho', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Ernesto Camacho');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Constitucional II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jacques Kazadi'), (SELECT id FROM docentes WHERE nome = 'Ernesto Camacho')
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -743,6 +979,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Ernesto Camacho'))
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito Constitucional II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Bernardo Sicoche', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Bernardo Sicoche');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ciência Política', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Bernardo Sicoche'), NULL
@@ -754,6 +994,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Ciência Política' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Vicente Mpanda', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Vicente Mpanda');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Inglês', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Vicente Mpanda'), NULL
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -763,6 +1007,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'DIR' AND d.nome = 'Inglês' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Gercio Macie', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Gercio Macie');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Cremildo Massuca', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Cremildo Massuca');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Finanças Públicas e Direito Financeiro', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Gercio Macie'), (SELECT id FROM docentes WHERE nome = 'Cremildo Massuca')
@@ -774,6 +1026,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Finanças Públicas e Direito Financeiro' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Naftal Zafanias', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Naftal Zafanias');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Carla Semente', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Carla Semente');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Habilidades de Vida, S.S e HIV/Sida', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Naftal Zafanias'), (SELECT id FROM docentes WHERE nome = 'Carla Semente')
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -783,6 +1043,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Carla Semente'))
 WHERE c.sigla = 'DIR' AND d.nome = 'Habilidades de Vida, S.S e HIV/Sida' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Palvina Nhambi', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Palvina Nhambi');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Alfinar Laisse', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Alfinar Laisse');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Português II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Palvina Nhambi'), (SELECT id FROM docentes WHERE nome = 'Alfinar Laisse')
@@ -794,6 +1062,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Português II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Justino Cesar', 'Padre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Justino Cesar');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Agnano Laissone', 'Padre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Agnano Laissone');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Fundamentos de Teologia Católica', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Justino Cesar'), (SELECT id FROM docentes WHERE nome = 'Agnano Laissone')
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -803,6 +1079,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Agnano Laissone'))
 WHERE c.sigla = 'DIR' AND d.nome = 'Fundamentos de Teologia Católica' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Ernesto Camacho', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Ernesto Camacho');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Teoria Geral do Dto Civil II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Ernesto Camacho'), NULL
@@ -814,6 +1094,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Teoria Geral do Dto Civil II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Rosina Zandamela', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Rosina Zandamela');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Administrativo II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Rosina Zandamela'), NULL
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -823,6 +1107,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito Administrativo II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Sérgio Baptista', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Sérgio Baptista');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Ernesto Gale', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Ernesto Gale');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito da Energia: Gás e Petróleo', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Sérgio Baptista'), (SELECT id FROM docentes WHERE nome = 'Ernesto Gale')
@@ -834,6 +1126,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito da Energia: Gás e Petróleo' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Gercio Macie', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Gercio Macie');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito do Ambiente e Urbanismo', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Gercio Macie'), NULL
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -844,6 +1140,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito do Ambiente e Urbanismo' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Nahome Cidade', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Nahome Cidade');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Penal II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Nahome Cidade'), NULL
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -853,6 +1153,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito Penal II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Constâncio Tevete', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Constâncio Tevete');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Tributário', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Constâncio Tevete'), NULL
@@ -874,6 +1178,14 @@ SELECT c.id, 'Sociologia Jurídica', 3, 2, 'Teorica', NULL, NULL
 FROM cursos c WHERE c.sigla = 'DIR'
   AND NOT EXISTS (SELECT 1 FROM disciplinas d WHERE d.curso_id = c.id AND d.nome = 'Sociologia Jurídica' AND d.ano_curricular = 3);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Sérgio Baptista', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Sérgio Baptista');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Rosina Zandamela', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Rosina Zandamela');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito do Trabalho II', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Sérgio Baptista'), (SELECT id FROM docentes WHERE nome = 'Rosina Zandamela')
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -883,6 +1195,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Rosina Zandamela'))
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito do Trabalho II' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Sérgio Baptista', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Sérgio Baptista');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Rosina Zandamela', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Rosina Zandamela');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito do Trabalho II', 4, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Sérgio Baptista'), (SELECT id FROM docentes WHERE nome = 'Rosina Zandamela')
@@ -894,6 +1214,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito do Trabalho II' AND d.ano_curricular = 4
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Nahome Cidade', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Nahome Cidade');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito das Sucessões', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Nahome Cidade'), NULL
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -903,6 +1227,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito das Sucessões' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Ivete Luis', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Ivete Luis');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Processual Civil Executivo', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Ivete Luis'), NULL
@@ -914,6 +1242,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito Processual Civil Executivo' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Ivan Taibo', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Ivan Taibo');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito das Obrigações I/II', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Ivan Taibo'), NULL
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -923,6 +1255,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito das Obrigações I/II' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Sérgio Baptista', 'Advogado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Sérgio Baptista');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito das Sociedades Comerciais', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Sérgio Baptista'), NULL
@@ -934,6 +1270,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito das Sociedades Comerciais' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Ernesto Camacho', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Ernesto Camacho');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direitos Reais e de Prop. Intelectual', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Ernesto Camacho'), NULL
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -943,6 +1283,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'DIR' AND d.nome = 'Direitos Reais e de Prop. Intelectual' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Rosina Zandamela', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Rosina Zandamela');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ética e Deontologia Jurídica', 4, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Rosina Zandamela'), NULL
@@ -954,6 +1298,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Ética e Deontologia Jurídica' AND d.ano_curricular = 4
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'João Zinocacassa', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'João Zinocacassa');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Processual Executivo', 4, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'João Zinocacassa'), NULL
 FROM cursos c WHERE c.sigla = 'DIR'
@@ -963,6 +1311,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito Processual Executivo' AND d.ano_curricular = 4
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Gercio Macie', 'Mestre (LLM)'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Gercio Macie');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Bancário e dos Seguros', 4, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Gercio Macie'), NULL
@@ -974,6 +1326,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'DIR' AND d.nome = 'Direito Bancário e dos Seguros' AND d.ano_curricular = 4
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Inelsa Aspirante', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Inelsa Aspirante');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Matemática II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Inelsa Aspirante'), NULL
 FROM cursos c WHERE c.sigla = 'EG'
@@ -983,6 +1339,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'EG' AND d.nome = 'Matemática II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Félquer Diogo', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Félquer Diogo');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Contabilidade Financeira', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Félquer Diogo'), NULL
@@ -994,6 +1354,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'EG' AND d.nome = 'Contabilidade Financeira' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Virgílio de Arimateia', 'Padre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Virgílio de Arimateia');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ética Geral', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Virgílio de Arimateia'), NULL
 FROM cursos c WHERE c.sigla = 'EG'
@@ -1003,6 +1367,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'EG' AND d.nome = 'Ética Geral' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Brito Taimo', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Brito Taimo');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Fundamentos de Gestão', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Brito Taimo'), NULL
@@ -1014,6 +1382,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'EG' AND d.nome = 'Fundamentos de Gestão' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Anselmo Pedro', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Anselmo Pedro');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Macroeconomia I', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Anselmo Pedro'), NULL
 FROM cursos c WHERE c.sigla = 'EG'
@@ -1023,6 +1395,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'EG' AND d.nome = 'Macroeconomia I' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Palvina Nhambi', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Palvina Nhambi');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Técnica de Expressão', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Palvina Nhambi'), NULL
@@ -1034,6 +1410,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'EG' AND d.nome = 'Técnica de Expressão' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Andissene Andissene', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Andissene Andissene');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Estatística II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Andissene Andissene'), NULL
 FROM cursos c WHERE c.sigla = 'EG'
@@ -1043,6 +1423,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'EG' AND d.nome = 'Estatística II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Nixon Manuel', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Nixon Manuel');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Economia Internacional', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Nixon Manuel'), NULL
@@ -1054,6 +1438,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'EG' AND d.nome = 'Economia Internacional' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'José Sarmento', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'José Sarmento');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Félquer Diogo', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Félquer Diogo');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Contabilidade de Gestão', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'José Sarmento'), (SELECT id FROM docentes WHERE nome = 'Félquer Diogo')
 FROM cursos c WHERE c.sigla = 'EG'
@@ -1063,6 +1455,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Félquer Diogo'))
 WHERE c.sigla = 'EG' AND d.nome = 'Contabilidade de Gestão' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Anselmo Pedro', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Anselmo Pedro');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Cálculo Financeiro', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Anselmo Pedro'), NULL
@@ -1074,6 +1470,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'EG' AND d.nome = 'Cálculo Financeiro' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Nixon Vicente', 'MBA'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Nixon Vicente');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Macroeconomia II', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Nixon Vicente'), NULL
 FROM cursos c WHERE c.sigla = 'EG'
@@ -1083,6 +1483,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'EG' AND d.nome = 'Macroeconomia II' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'José Sarmento', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'José Sarmento');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Projecto de Simulação Empresarial I', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'José Sarmento'), NULL
@@ -1094,6 +1498,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'EG' AND d.nome = 'Projecto de Simulação Empresarial I' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Domingos Saite', 'MBA'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Domingos Saite');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Félquer Diogo', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Félquer Diogo');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Mercados e Investimentos Financeiros', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Domingos Saite'), (SELECT id FROM docentes WHERE nome = 'Félquer Diogo')
 FROM cursos c WHERE c.sigla = 'EG'
@@ -1103,6 +1515,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Félquer Diogo'))
 WHERE c.sigla = 'EG' AND d.nome = 'Mercados e Investimentos Financeiros' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Nixon Vicente', 'MBA'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Nixon Vicente');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Macroeconomia III', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Nixon Vicente'), NULL
@@ -1114,6 +1530,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'EG' AND d.nome = 'Macroeconomia III' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Feroz Mussa', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Feroz Mussa');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Econometria II', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Feroz Mussa'), NULL
 FROM cursos c WHERE c.sigla = 'EG'
@@ -1123,6 +1543,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'EG' AND d.nome = 'Econometria II' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Anselmo Pedro', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Anselmo Pedro');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Economia de Ambiente e Recursos', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Anselmo Pedro'), NULL
@@ -1134,6 +1558,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'EG' AND d.nome = 'Economia de Ambiente e Recursos' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Nixon Vicente', 'MBA'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Nixon Vicente');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Economia Pública', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Nixon Vicente'), NULL
 FROM cursos c WHERE c.sigla = 'EG'
@@ -1143,6 +1571,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'EG' AND d.nome = 'Economia Pública' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Longo Chuva', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Longo Chuva');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Relações Públicas e Marketing', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Longo Chuva'), NULL
@@ -1154,6 +1586,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'AP' AND d.nome = 'Relações Públicas e Marketing' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Deolinda Lurdes Inácio', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Deolinda Lurdes Inácio');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Administração Pública Comparada', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Deolinda Lurdes Inácio'), NULL
 FROM cursos c WHERE c.sigla = 'AP'
@@ -1164,6 +1600,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'AP' AND d.nome = 'Administração Pública Comparada' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Carla Semente', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Carla Semente');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Gestão de RH na Função Pública', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Carla Semente'), NULL
 FROM cursos c WHERE c.sigla = 'AP'
@@ -1173,6 +1613,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'AP' AND d.nome = 'Gestão de RH na Função Pública' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'José Albuquerque', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'José Albuquerque');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Reforma do Sector Público', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'José Albuquerque'), NULL
@@ -1189,6 +1633,10 @@ SELECT c.id, 'Gestão de Informação na Adm. Pública', 3, 2, 'Teorica', NULL, 
 FROM cursos c WHERE c.sigla = 'AP'
   AND NOT EXISTS (SELECT 1 FROM disciplinas d WHERE d.curso_id = c.id AND d.nome = 'Gestão de Informação na Adm. Pública' AND d.ano_curricular = 3);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Domingos Saite', 'MBA'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Domingos Saite');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Economia Pública', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Domingos Saite'), NULL
 FROM cursos c WHERE c.sigla = 'AP'
@@ -1198,6 +1646,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'AP' AND d.nome = 'Economia Pública' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Deolinda Lurdes Inácio', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Deolinda Lurdes Inácio');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Gestão Estratégica', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Deolinda Lurdes Inácio'), NULL
@@ -1209,6 +1661,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'AP' AND d.nome = 'Gestão Estratégica' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Carlos Dezembro', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Carlos Dezembro');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Finanças e Orçamento Público', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Carlos Dezembro'), NULL
 FROM cursos c WHERE c.sigla = 'AP'
@@ -1218,6 +1674,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'AP' AND d.nome = 'Finanças e Orçamento Público' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Marcelino Escova', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Marcelino Escova');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Contabilidade Geral', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Marcelino Escova'), NULL
@@ -1229,6 +1689,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'AP' AND d.nome = 'Contabilidade Geral' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Heitor Foia', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Heitor Foia');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Direito Administrativo Básico', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Heitor Foia'), NULL
 FROM cursos c WHERE c.sigla = 'AP'
@@ -1238,6 +1702,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'AP' AND d.nome = 'Direito Administrativo Básico' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Nthete Buleza', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Nthete Buleza');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Química Ambiental', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Nthete Buleza'), NULL
@@ -1249,6 +1717,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GA' AND d.nome = 'Química Ambiental' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jemusse Gale', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jemusse Gale');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Cartografia', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jemusse Gale'), NULL
 FROM cursos c WHERE c.sigla = 'GA'
@@ -1258,6 +1730,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GA' AND d.nome = 'Cartografia' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Daniel Cuinhane', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Daniel Cuinhane');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Climatologia', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Daniel Cuinhane'), NULL
@@ -1269,6 +1745,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GA' AND d.nome = 'Climatologia' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Vicente Mpanda', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Vicente Mpanda');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Inglês II', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Vicente Mpanda'), NULL
 FROM cursos c WHERE c.sigla = 'GA'
@@ -1278,6 +1758,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GA' AND d.nome = 'Inglês II' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Andissene Andissene', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Andissene Andissene');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Estatística e Probabilidade', 1, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Andissene Andissene'), NULL
@@ -1289,6 +1773,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GA' AND d.nome = 'Estatística e Probabilidade' AND d.ano_curricular = 1
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Ringo Victor', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Ringo Victor');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Gestão de Riscos Ambientais', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Ringo Victor'), NULL
 FROM cursos c WHERE c.sigla = 'GA'
@@ -1298,6 +1786,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GA' AND d.nome = 'Gestão de Riscos Ambientais' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jemusse Gale', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jemusse Gale');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Planeamento Regional', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jemusse Gale'), NULL
@@ -1309,6 +1801,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GA' AND d.nome = 'Planeamento Regional' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'António Tuzine', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'António Tuzine');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Hélio Andicene', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Hélio Andicene');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Recuperação de Áreas Degradadas', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'António Tuzine'), (SELECT id FROM docentes WHERE nome = 'Hélio Andicene')
 FROM cursos c WHERE c.sigla = 'GA'
@@ -1318,6 +1818,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Hélio Andicene'))
 WHERE c.sigla = 'GA' AND d.nome = 'Recuperação de Áreas Degradadas' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Elton Laissone', 'Padre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Elton Laissone');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ética Social e Ambiental', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Elton Laissone'), NULL
@@ -1329,6 +1833,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GA' AND d.nome = 'Ética Social e Ambiental' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Alfatílio Húo', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Alfatílio Húo');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Recursos Energéticos e Meio Ambiente', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Alfatílio Húo'), NULL
 FROM cursos c WHERE c.sigla = 'GA'
@@ -1338,6 +1846,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GA' AND d.nome = 'Recursos Energéticos e Meio Ambiente' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'António Tuzine', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'António Tuzine');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ecologia Ambiental', 2, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'António Tuzine'), NULL
@@ -1349,6 +1861,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GA' AND d.nome = 'Ecologia Ambiental' AND d.ano_curricular = 2
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Longo Chuva', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Longo Chuva');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Ecoturismo', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Longo Chuva'), NULL
 FROM cursos c WHERE c.sigla = 'GA'
@@ -1358,6 +1874,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GA' AND d.nome = 'Ecoturismo' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Trindade Chapare', 'Doutor'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Trindade Chapare');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Recursos Naturais e Sustentabilidade Ambiental', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Trindade Chapare'), NULL
@@ -1369,6 +1889,14 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GA' AND d.nome = 'Recursos Naturais e Sustentabilidade Ambiental' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'António Tuzine', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'António Tuzine');
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Hélio Andicene', 'Licenciado'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Hélio Andicene');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Gestão das Áreas Protegidas', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'António Tuzine'), (SELECT id FROM docentes WHERE nome = 'Hélio Andicene')
 FROM cursos c WHERE c.sigla = 'GA'
@@ -1378,6 +1906,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, (SELECT id FROM docentes WHERE nome = 'Hélio Andicene'))
 WHERE c.sigla = 'GA' AND d.nome = 'Gestão das Áreas Protegidas' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Daniel Cuinhane', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Daniel Cuinhane');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Gestão Costeira e Águas Interiores', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Daniel Cuinhane'), NULL
@@ -1389,6 +1921,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
 WHERE c.sigla = 'GA' AND d.nome = 'Gestão Costeira e Águas Interiores' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
 
+INSERT INTO docentes (nome, categoria)
+SELECT 'Alfatílio Húo', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Alfatílio Húo');
+
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Estudo de Avaliação de Impacto Ambiental', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Alfatílio Húo'), NULL
 FROM cursos c WHERE c.sigla = 'GA'
@@ -1398,6 +1934,10 @@ SET d.docente_regente_id = COALESCE(d.docente_regente_id, (SELECT id FROM docent
     d.docente_assistente_id = COALESCE(d.docente_assistente_id, NULL)
 WHERE c.sigla = 'GA' AND d.nome = 'Estudo de Avaliação de Impacto Ambiental' AND d.ano_curricular = 3
   AND (d.docente_regente_id IS NULL OR d.docente_assistente_id IS NULL);
+
+INSERT INTO docentes (nome, categoria)
+SELECT 'Jemusse Gale', 'Mestre'
+WHERE NOT EXISTS (SELECT 1 FROM docentes WHERE nome = 'Jemusse Gale');
 
 INSERT INTO disciplinas (curso_id, nome, ano_curricular, carga_horaria, tipo_aula, docente_regente_id, docente_assistente_id)
 SELECT c.id, 'Avaliação Integrada de Recursos Naturais e OT', 3, 2, 'Teorica', (SELECT id FROM docentes WHERE nome = 'Jemusse Gale'), NULL
