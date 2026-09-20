@@ -137,12 +137,25 @@ seed novo corre sozinho — nem com `git pull` + `docker compose up --build`.
 É preciso aplicá-los à mão contra o contentor já a correr:
 
 ```bash
-# a partir da pasta do projeto na VPS, onde está o docker-compose.yml
-docker compose exec -T db mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$DB_NAME" \
-  < sql/atualizar_producao_vps.sql
-docker compose exec -T db mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$DB_NAME" \
-  < sql/seed3_dados_reais.sql
+# a partir da pasta do projeto na VPS, onde está o docker-compose.yml;
+# carrega o .env para a shell primeiro, para $MYSQL_ROOT_PASSWORD e
+# $DB_NAME ficarem definidos (docker compose lê o .env sozinho, mas só
+# para preencher o docker-compose.yml — a shell não fica com as mesmas
+# variáveis só por estares nesta pasta):
+set -a; source .env; set +a
+
+docker compose exec -T db mysql --default-character-set=utf8mb4 \
+  -u root -p"$MYSQL_ROOT_PASSWORD" "$DB_NAME" < sql/atualizar_producao_vps.sql
+docker compose exec -T db mysql --default-character-set=utf8mb4 \
+  -u root -p"$MYSQL_ROOT_PASSWORD" "$DB_NAME" < sql/seed3_dados_reais.sql
 ```
+
+**`--default-character-set=utf8mb4` nestes dois comandos não é opcional** —
+sem ele, todos os nomes com acentos ficam gravados corrompidos (ex.:
+"Administração" vira "AdministraÃ§Ã£o"). Se isso já te aconteceu, corre
+`sql/reparar_encoding_vps.sql` (o mesmo `docker compose exec`, mas este
+não precisa da flag porque não insere texto novo) — repara os nomes já
+gravados sem duplicar nada nem tocar nos que já estavam corretos.
 
 `sql/atualizar_producao_vps.sql` é o equivalente a todos os
 `sql/migracao_*.sql` juntos, escrito para correr contra o contentor sem
