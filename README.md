@@ -126,6 +126,30 @@ O `.htaccess` da raiz e de `sql/` já bloqueiam o acesso direto a `.sql`,
 `.env`, `.md`, `.bat`, `.git` e listagem de pastas — não precisas de mais
 nada aí.
 
+## Atualizar a base de dados na VPS (Docker)
+
+Se estiveres a correr com `docker-compose.yml` (`docker compose up -d
+--build`) em vez do Apache direto: o serviço `db` só monta `sql/schema.sql`
+e `sql/seed.sql` em `/docker-entrypoint-initdb.d`, e a imagem oficial do
+MySQL só corre os ficheiros dessa pasta **uma vez**, quando o volume
+`horarios_db_data` está vazio. Depois disso, nenhuma migração nem nenhum
+seed novo corre sozinho — nem com `git pull` + `docker compose up --build`.
+É preciso aplicá-los à mão contra o contentor já a correr:
+
+```bash
+# a partir da pasta do projeto na VPS, onde está o docker-compose.yml
+docker compose exec -T db mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$DB_NAME" \
+  < sql/atualizar_producao_vps.sql
+docker compose exec -T db mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$DB_NAME" \
+  < sql/seed3_dados_reais.sql
+```
+
+`sql/atualizar_producao_vps.sql` é o equivalente a todos os
+`sql/migracao_*.sql` juntos, escrito para correr contra o contentor sem
+precisares de saber quais já foram aplicados — cada alteração confirma
+primeiro que ainda não existe (idempotente, seguro correr mais do que
+uma vez). `$MYSQL_ROOT_PASSWORD` e `$DB_NAME` já estão no `.env` da VPS.
+
 ## Contas de teste
 | Perfil        | E-mail                     | Password    |
 |---------------|----------------------------|-------------|
