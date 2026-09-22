@@ -137,9 +137,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Acesso reservado à coordenação e ao corpo docente.<br>
                 Problemas com a conta? Contacta o administrador do sistema.
             </p>
-            <p class="login-nota">
-                És docente e ainda não tens conta? <a href="<?= BASE_URL ?>/auth/registar.php" style="color:var(--cobalt);font-weight:600">Regista-te</a>
-            </p>
         </div>
     </section>
 </main>
