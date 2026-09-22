@@ -41,6 +41,13 @@ services:
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
       BASE_URL: ""
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-}
 
     labels:
       - "traefik.enable=true"
