@@ -92,7 +92,14 @@ SET @c := (SELECT COUNT(*) FROM information_schema.STATISTICS
 SET @sql := IF(@c = 0, 'ALTER TABLE conflitos ADD INDEX idx_conflitos_estado (estado)', 'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 7) Pedidos dos docentes ao coordenador
+-- 7) Mensagem completa do conflito (nomes/dia/hora), para as páginas de
+-- Conflitos deixarem de mostrar só "disc1 em conflito com disc2"
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'conflitos' AND COLUMN_NAME = 'mensagem');
+SET @sql := IF(@c = 0, 'ALTER TABLE conflitos ADD COLUMN mensagem VARCHAR(500) NULL AFTER tipo', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 8) Pedidos dos docentes ao coordenador
 CREATE TABLE IF NOT EXISTS pedidos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   utilizador_id INT NOT NULL,

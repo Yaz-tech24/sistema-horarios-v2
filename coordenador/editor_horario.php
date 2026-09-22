@@ -134,18 +134,14 @@ if ($turmaAtual) {
             ];
 
             // RN16 — uma disciplina Prática/Laboratorial com laboratório
-            // próprio (admin/disciplinas.php) decorre sempre nesse laboratório.
-            // A sala é forçada aqui no servidor, sem confiar no que vem do POST:
-            // é isto que garante, em conjunto com a RN02 (sala ocupada, que já
-            // olha para TODOS os cursos e horários não arquivados), que os
-            // laboratórios nunca ficam com duas aulas ao mesmo tempo.
-            $labDaDisciplina = null;
-            if ($aula['tipo_bloco'] === 'Aula' && $aula['disciplina_id']) {
-                $stmtLab = $pdo->prepare("SELECT sala_id FROM disciplinas WHERE id = ?");
-                $stmtLab->execute([$aula['disciplina_id']]);
-                $labDaDisciplina = (int)($stmtLab->fetchColumn() ?: 0) ?: null;
-                if ($labDaDisciplina) { $aula['sala_id'] = $labDaDisciplina; }
-            }
+            // próprio (admin/disciplinas.php) tem esse laboratório como
+            // SUGESTÃO no formulário (JS pré-preenche o campo Sala quando a
+            // disciplina é escolhida), mas o coordenador pode trocar para
+            // qualquer outra sala manualmente — a sala escolhida no POST é
+            // respeitada tal como está. Quem continua a impedir duas aulas
+            // na mesma sala ao mesmo tempo, seja lá qual for a sala, é a
+            // RN02 (verificarConflitos, abaixo), que olha para TODOS os
+            // cursos e horários não arquivados.
 
             if (!in_array($aula['dia_semana'], DIAS_SEMANA, true) || !isset($blocosValidos[$bloco])) {
                 $erro = "Escolhe o dia e o bloco horário (tem de ser um dos blocos do turno desta turma).";
@@ -440,7 +436,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <option value="<?= $i ?>|<?= $f ?>" <?= ($blocoEdicao === "$i|$f") ? 'selected' : '' ?>><?= $i ?> – <?= $f ?></option>
                     <?php endforeach; ?>
                 </select>
-                <small id="f-sala-nota" hidden style="color:var(--ink-soft);font-size:.75rem">Laboratório fixo desta disciplina — a aula fica sempre aqui.</small></div>
+                <small id="f-sala-nota" hidden style="color:var(--ink-soft);font-size:.75rem">Laboratório sugerido para esta disciplina — podes escolher outra sala, se precisares.</small></div>
             <div class="campo campo-so-aula"><label>Subgrupo (opcional)</label>
                 <input class="form-control" type="text" name="subgrupo" maxlength="10" placeholder="ex.: A ou B" value="<?= htmlspecialchars($edicao['subgrupo'] ?? '') ?>"></div>
             <div class="campo" style="grid-column:1/-1;display:flex;gap:8px">
@@ -547,11 +543,15 @@ require_once __DIR__ . '/../includes/header.php';
         }
 
         var notaSala = document.getElementById('f-sala-nota');
-        function aplicarLabDaDisciplina(salaId) {
+        // A sala do laboratório é só uma SUGESTÃO (RN16) — o campo nunca é
+        // desativado, o coordenador pode sempre trocar para outra sala.
+        // `forcarValor` só é true quando a disciplina muda por ação do
+        // coordenador (não ao carregar a página), para não sobrepor uma
+        // sala já guardada quando se está a editar uma aula existente.
+        function aplicarLabDaDisciplina(salaId, forcarValor) {
             if (!selSala) { return; }
             var temLab = !!salaId;
-            if (temLab) { selSala.value = salaId; }
-            selSala.disabled = temLab;   // o servidor força na mesma (RN16)
+            if (temLab && forcarValor) { selSala.value = salaId; }
             if (notaSala) { notaSala.hidden = !temLab; }
         }
 
@@ -561,10 +561,9 @@ require_once __DIR__ . '/../includes/header.php';
                 if (info) {
                     if (info.regente) { selRegente.value = info.regente; }
                     if (info.assistente) { selAssistente.value = info.assistente; }
-                    // Laboratório da disciplina (admin/disciplinas.php). O
-                    // servidor força esta sala à mesma (RN16) — aqui é só para
-                    // o coordenador ver logo onde a aula vai ficar.
-                    if (selSala) { aplicarLabDaDisciplina(info.sala); }
+                    // Laboratório da disciplina (admin/disciplinas.php) —
+                    // só pré-preenche o campo Sala; continua editável.
+                    if (selSala) { aplicarLabDaDisciplina(info.sala, true); }
                 }
                 var permitidos = mapaDisciplinaDocentes[this.value] || [];
                 filtrarDocentes(selRegente, permitidos);
@@ -574,7 +573,7 @@ require_once __DIR__ . '/../includes/header.php';
             filtrarDocentes(selRegente, mapaDisciplinaDocentes[selDisc.value] || []);
             filtrarDocentes(selAssistente, mapaDisciplinaDocentes[selDisc.value] || []);
             var infoInicial = mapaDocentesDisciplina[selDisc.value];
-            aplicarLabDaDisciplina(infoInicial ? infoInicial.sala : 0);
+            aplicarLabDaDisciplina(infoInicial ? infoInicial.sala : 0, false);
         }
 
         // A clicar em "editar" num bloco, a página recarrega com o

@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($f = lerFlash()) { ${$f['tipo']} = $f['texto']; }
 
 $conflitos = $pdo->query(
-    "SELECT co.id, co.tipo, co.detetado_em,
+    "SELECT co.id, co.tipo, co.mensagem, co.detetado_em,
             a1.dia_semana, a1.hora_inicio, a1.hora_fim,
             d1.nome AS disc1, d2.nome AS disc2,
             c.sigla AS curso_sigla, c.nome AS curso_nome, c.id AS curso_id,
@@ -107,7 +107,7 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
         <div class="data-table-wrap">
             <table class="data-table">
-                <thead><tr><th>Turma</th><th>Quando</th><th>Tipo</th><th>Aula</th><th>Em conflito com</th><th>Detetado</th></tr></thead>
+                <thead><tr><th>Turma</th><th>Quando</th><th>Tipo</th><th>Aula</th><th>Detalhe</th><th>Detetado</th></tr></thead>
                 <tbody>
                 <?php foreach ($lista as $c): ?>
                 <tr>
@@ -115,7 +115,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <td><?= htmlspecialchars($c['dia_semana']) ?><br><small style="color:var(--ink-soft)"><?= substr($c['hora_inicio'],0,5) ?>–<?= substr($c['hora_fim'],0,5) ?></small></td>
                     <td><span class="badge badge-warning"><?= htmlspecialchars($c['tipo']) ?></span></td>
                     <td><?= htmlspecialchars($c['disc1'] ?? 'bloco sem disciplina') ?></td>
-                    <td><?= htmlspecialchars($c['disc2'] ?? 'bloco sem disciplina') ?></td>
+                    <td><?= htmlspecialchars($c['mensagem'] ?? ('Em conflito com "' . ($c['disc2'] ?? 'outra aula') . '".')) ?></td>
                     <td><small style="color:var(--ink-soft)"><?= htmlspecialchars(substr($c['detetado_em'], 0, 16)) ?></small></td>
                 </tr>
                 <?php endforeach; ?>

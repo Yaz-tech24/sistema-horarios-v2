@@ -31,9 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['publicar'])) {
         $pdo->prepare("UPDATE horarios SET estado='Publicado', data_publicacao=NOW() WHERE id=?")
             ->execute([$horarioId]);
         registarHistorico($pdo, $horarioId, "Horário publicado");
-        $n = notificarDocentesDoHorario($pdo, $horarioId,
-            "O horário de " . $curso['sigla'] . " foi publicado. Consulta o teu horário atualizado.");
-        $ok = "Horário publicado com sucesso. $n docente(s) notificado(s).";
+        $notif = notificarDocentesDoHorario($pdo, $horarioId,
+            "O horário de " . $curso['sigla'] . " foi publicado. Consulta o teu horário atualizado.",
+            "Horário de " . $curso['sigla'] . " disponível");
+        $ok = "Horário publicado com sucesso. {$notif['internas']} docente(s) notificado(s)"
+            . (smtpConfigurado() ? " ({$notif['emails']} por email)." : ".");
         $horario['estado'] = 'Publicado';
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['arquivar'])) {

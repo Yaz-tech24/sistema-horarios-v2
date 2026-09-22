@@ -126,6 +126,31 @@ O `.htaccess` da raiz e de `sql/` já bloqueiam o acesso direto a `.sql`,
 `.env`, `.md`, `.bat`, `.git` e listagem de pastas — não precisas de mais
 nada aí.
 
+## Envio de email aos docentes (opcional)
+
+Quando um coordenador publica um horário, além da notificação interna (que
+já funciona sempre, dentro do próprio site), o sistema tenta enviar um
+email a cada docente com conta e email cadastrados. Isto só acontece se o
+SMTP estiver configurado no `.env` — sem isso, publicar continua a
+funcionar normalmente, só sem o email. Preencher no `.env`:
+
+```
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_USER=horarios@o-teu-dominio.mz
+SMTP_PASS=a-palavra-passe-dessa-conta-de-email
+SMTP_FROM=horarios@o-teu-dominio.mz
+SMTP_FROM_NAME=Sistema de Horarios FAGRENM
+```
+
+Porta 465 usa TLS implícito (`SMTP_SECURE=ssl`, o valor por omissão); para
+um servidor que só aceite STARTTLS (porta 587), definir `SMTP_SECURE=tls`.
+Não é preciso nenhuma biblioteca — `includes/email.php` fala SMTP
+diretamente por um socket, tal como o resto do projeto não usa Composer.
+Uma falha de envio (credenciais erradas, servidor em baixo, etc.) fica só
+registada no log de erros do servidor — nunca impede a publicação nem
+aparece ao coordenador como erro.
+
 ## Atualizar a base de dados na VPS (Docker)
 
 Se estiveres a correr com `docker-compose.yml` (`docker compose up -d
@@ -235,17 +260,19 @@ controlo de acesso por curso (não consegue entrar em Direito, AP, etc.).
 
 ### RN16 — laboratórios das disciplinas práticas
 Uma disciplina com `tipo_aula` **Prática** ou **Laboratorial** pode ter um
-laboratório fixo (`disciplinas.sala_id`, definido em **Admin → Disciplinas**).
-Quando tem:
+laboratório preferido (`disciplinas.sala_id`, definido em **Admin →
+Disciplinas**). Quando tem:
 - a geração automática coloca-a sempre nesse laboratório, em vez de escolher
   sala pela capacidade;
-- o editor manual **força** essa sala no servidor — o campo Sala fica travado
-  e o valor que vier do POST é ignorado (`coordenador/editor_horario.php`);
+- o editor manual **pré-preenche** essa sala assim que a disciplina é
+  escolhida (é só sugestão — o coordenador pode trocar para qualquer outra
+  sala manualmente, o valor do POST é respeitado tal como está);
 - a RN02 (sala ocupada) continua a valer e olha para **todos os cursos e
-  horários não arquivados**, por isso o mesmo laboratório nunca fica com duas
-  aulas à mesma hora, seja de que curso for;
+  horários não arquivados**, por isso a mesma sala nunca fica com duas aulas
+  à mesma hora, seja de que curso for — é isto, e não um bloqueio no campo,
+  que impede duas aulas na mesma sala;
 - se o laboratório estiver ocupado em todos os blocos livres da turma, a
-  disciplina fica por agendar e o resumo da geração diz porquê.
+  disciplina fica por agendar na geração automática e o resumo diz porquê.
 
 ### RN07 — subgrupos
 Uma aula pode ter um **subgrupo** (campo livre no editor, ex.: `T1`, `P2`).

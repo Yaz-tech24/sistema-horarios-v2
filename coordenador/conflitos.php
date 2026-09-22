@@ -32,6 +32,10 @@ $stmt = $pdo->prepare(
      LEFT JOIN disciplinas d2 ON a2.disciplina_id = d2.id
      WHERE a1.horario_id = ? AND co.estado = 'Resolvido'
      ORDER BY co.detetado_em DESC LIMIT 20");
+// Conflitos pendentes de antes desta coluna existir ainda não têm
+// mensagem detalhada gravada (só é preenchida quando o conflito é
+// detetado de novo) — mostra uma descrição genérica nesse caso.
+$descricaoGenerica = fn(array $c) => "Em conflito com \"" . ($c['disc2'] ?? 'outra aula') . "\".";
 $stmt->execute([$horarioId]);
 $resolvidos = $stmt->fetchAll();
 
@@ -60,7 +64,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <span class="conflict-icon"><?= icone($iconesTipo[$c['tipo']] ?? 'alert') ?></span>
                 <div>
                     <h3><?= htmlspecialchars($c['tipo']) ?> — <?= htmlspecialchars($c['disc1'] ?? 'Aula') ?></h3>
-                    <p>Em conflito com <?= htmlspecialchars($c['disc2'] ?? 'outra aula') ?>. Corrige no editor de horário.</p>
+                    <p><?= htmlspecialchars($c['mensagem'] ?? $descricaoGenerica($c)) ?></p>
                     <div class="conflict-meta">
                         <span class="badge badge-info"><?= htmlspecialchars($c['dia_semana']) ?></span>
                         <span class="badge badge-info"><?= substr($c['hora_inicio'],0,5) ?>–<?= substr($c['hora_fim'],0,5) ?></span>
@@ -81,7 +85,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <span class="conflict-icon"><?= icone($iconesTipo[$c['tipo']] ?? 'check') ?></span>
                 <div>
                     <h3><?= htmlspecialchars($c['tipo']) ?> — <?= htmlspecialchars($c['disc1'] ?? 'Aula') ?></h3>
-                    <p>Estava em conflito com <?= htmlspecialchars($c['disc2'] ?? 'outra aula') ?>.</p>
+                    <p><?= htmlspecialchars($c['mensagem'] ?? $descricaoGenerica($c)) ?></p>
                     <div class="conflict-meta">
                         <span class="badge badge-success"><span class="status-dot"></span>Resolvido</span>
                         <span class="badge badge-info"><?= htmlspecialchars($c['dia_semana']) ?></span>

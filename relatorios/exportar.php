@@ -79,7 +79,26 @@ function celulaCsvSegura(?string $valor): string {
     return $valor !== '' && strpbrk($valor[0], "=+-@") !== false ? "'" . $valor : $valor;
 }
 
+/* Texto de uma aula/bloco para uma célula da grelha CSV — as mesmas 3
+   linhas que a grelha no ecrã mostra (disciplina, regente/assistente,
+   sala), juntas com quebra de linha; o Excel mostra isto envolvido dentro
+   de uma única célula. */
+function celulaAulaTexto(array $a): string {
+    if ($a['tipo_bloco'] !== 'Aula') {
+        return str_replace('_', ' ', $a['tipo_bloco']);
+    }
+    $titulo = $a['disciplina'] ?? '—';
+    if (!empty($a['subgrupo'])) { $titulo .= " (Subgrupo {$a['subgrupo']})"; }
+    $linhaDocente = 'Regente: ' . ($a['regente'] ?? $a['docente'] ?? '—');
+    if (!empty($a['assistente'])) { $linhaDocente .= ' · Assistente: ' . $a['assistente']; }
+    return implode("\n", [$titulo, $linhaDocente, 'Sala: ' . ($a['sala'] ?? '—')]);
+}
+
 // ---- Exportação em CSV (Excel) — responde e termina antes de qualquer HTML ----
+// Formato em grelha (Hora × Dia), a mesma organização da grelha no ecrã e no
+// PDF — uma lista plana (uma linha por aula, incluindo Estudo Autónomo/
+// Atividade Não Letiva) ficava confusa de ler, sobretudo a exportar um
+// curso inteiro com várias turmas misturadas na mesma lista.
 if (($_GET['formato'] ?? '') === 'csv') {
     $turmasParaCsv = $turmasDoCursoSel ?: ($turmaSel ? [$turmaSel] : []);
     if ($turmasParaCsv) {
@@ -89,16 +108,35 @@ if (($_GET['formato'] ?? '') === 'csv') {
         header('Content-Disposition: attachment; filename="horario_' . $nomeFicheiro . '_' . date('Y-m-d') . '.csv"');
         $out = fopen('php://output', 'w');
         fputs($out, "\xEF\xBB\xBF"); // BOM — o Excel só respeita acentos com isto
-        fputcsv($out, ['Turma','Dia','Hora Início','Hora Fim','Tipo','Disciplina','Regente','Assistente','Sala','Subgrupo'], ';');
+        // "sep=;" como primeira linha do ficheiro obriga o Excel a ler com
+        // ; como separador de colunas, seja qual for a definição regional
+        // do Windows de quem abre o ficheiro (com vírgula por definição, um
+        // CSV separado por ; sem esta linha abre tudo numa só coluna).
+        fputs($out, "sep=;\r\n");
+
+        $primeiraTurma = true;
         foreach ($turmasParaCsv as $t) {
-            $nome = nomeTurma($t);
+            if (!$primeiraTurma) { fputcsv($out, [], ';'); } // linha em branco entre turmas
+            $primeiraTurma = false;
+
+            fputcsv($out, [celulaCsvSegura(nomeTurma($t) . ' — ' . $t['curso_nome'])], ';');
+            fputcsv($out, ['Turno: ' . str_replace(['Manha','Tarde'], ['Manhã','Tarde'], $t['turno'])
+                . ' · Gerado em ' . date('d/m/Y H:i')], ';');
+
+            $grelha = [];
             foreach (aulasDaTurma($pdo, (int)$t['id']) as $a) {
-                fputcsv($out, [
-                    celulaCsvSegura($nome), $a['dia_semana'], substr($a['hora_inicio'],0,5), substr($a['hora_fim'],0,5),
-                    str_replace('_',' ',$a['tipo_bloco']), celulaCsvSegura($a['disciplina'] ?? ''),
-                    celulaCsvSegura($a['regente'] ?? $a['docente'] ?? ''), celulaCsvSegura($a['assistente'] ?? ''),
-                    celulaCsvSegura($a['sala'] ?? ''), celulaCsvSegura($a['subgrupo'] ?? ''),
-                ], ';');
+                $grelha[$a['dia_semana']][substr($a['hora_inicio'], 0, 5)][] = $a;
+            }
+
+            fputcsv($out, array_merge(['Hora'], DIAS_SEMANA), ';');
+            foreach (blocosDoTurno($t['turno']) as [$hi, $hf]) {
+                $linha = [$hi . '–' . $hf];
+                foreach (DIAS_SEMANA as $d) {
+                    $partes = [];
+                    foreach (($grelha[$d][$hi] ?? []) as $a) { $partes[] = celulaAulaTexto($a); }
+                    $linha[] = celulaCsvSegura(implode("\n\n", $partes));
+                }
+                fputcsv($out, $linha, ';');
             }
         }
         fclose($out);

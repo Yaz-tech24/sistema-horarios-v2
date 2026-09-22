@@ -146,6 +146,12 @@ CREATE TABLE conflitos (
   aula_id_1 INT NOT NULL,
   aula_id_2 INT NOT NULL,
   tipo ENUM('Docente','Sala','Turma','Capacidade','Pastoral','Carga') NOT NULL,
+  -- Frase completa gerada por verificarConflitos() no momento em que o
+  -- conflito foi detetado (nomes de docente/sala, dia/hora, papel de
+  -- cada um) — sem isto, as páginas de Conflitos só tinham disc1/disc2/
+  -- dia/hora genéricos, bem menos claros do que o aviso que já aparecia
+  -- no editor ao tentar guardar a aula.
+  mensagem VARCHAR(500) NULL,
   estado ENUM('Pendente','Resolvido') DEFAULT 'Pendente',
   detetado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (aula_id_1) REFERENCES aulas(id),

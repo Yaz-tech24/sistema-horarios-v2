@@ -3,8 +3,26 @@
    Verifica uma aula candidata contra TODAS as aulas do sistema,
    em qualquer curso — docentes e salas são recursos partilhados. */
 
+/* Nome de um docente pelo id, com cache por pedido (esta função é chamada
+   muitas vezes seguidas em revalidarHorario, sempre para os mesmos poucos
+   docentes de uma turma). */
+function nomeDocentePorId(PDO $pdo, ?int $id): ?string {
+    static $cache = [];
+    if (!$id) { return null; }
+    if (!array_key_exists($id, $cache)) {
+        $stmt = $pdo->prepare("SELECT nome FROM docentes WHERE id = ?");
+        $stmt->execute([$id]);
+        $cache[$id] = $stmt->fetchColumn() ?: null;
+    }
+    return $cache[$id];
+}
+
 function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): array {
     $problemas = [];
+    $diaCand = $aula['dia_semana'] ?? '';
+    $hiCand  = substr($aula['hora_inicio'] ?? '', 0, 5);
+    $hfCand  = substr($aula['hora_fim'] ?? '', 0, 5);
+    $quandoCand = trim("$diaCand $hiCand" . ($hfCand ? "–$hfCand" : ''));
 
     // RN08 — bloco fixo da Pastoral Universitária (Quarta, 2º bloco do
     // turno, só em regime Laboral). Verifica-se ANTES de tudo — mesmo
@@ -89,12 +107,16 @@ function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): 
     }
 
     $sql = "SELECT au.*, d.nome AS disciplina_nome, c.sigla AS curso_sigla,
-                   t.ano_curricular
+                   t.ano_curricular, t.nome_turma, s.nome AS sala_nome,
+                   dr.nome AS regente_nome, da.nome AS assistente_nome
             FROM aulas au
             JOIN horarios h ON au.horario_id = h.id
             JOIN turmas t ON h.turma_id = t.id
             JOIN cursos c ON t.curso_id = c.id
             LEFT JOIN disciplinas d ON au.disciplina_id = d.id
+            LEFT JOIN salas s ON au.sala_id = s.id
+            LEFT JOIN docentes dr ON dr.id = COALESCE(au.docente_regente_id, au.docente_id)
+            LEFT JOIN docentes da ON da.id = au.docente_assistente_id
             WHERE au.dia_semana = ?
               AND au.hora_inicio < ?
               AND au.hora_fim > ?
@@ -113,47 +135,59 @@ function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): 
     $candAssistente = $aula['docente_assistente_id'] ?? null;
 
     foreach ($stmt->fetchAll() as $outra) {
-        $onde = $outra['curso_sigla'] . ' ' . $outra['ano_curricular'] . 'º — '
+        $onde = $outra['curso_sigla'] . ' ' . $outra['ano_curricular'] . 'º (' . $outra['nome_turma'] . ') — '
               . ($outra['disciplina_nome'] ?? 'aula');
+        $ondeComSala = $onde . ($outra['sala_nome'] ? ", sala {$outra['sala_nome']}" : '');
 
         $outraRegente    = $outra['docente_regente_id'] ?: $outra['docente_id'];
         $outraAssistente = $outra['docente_assistente_id'] ?? null;
 
-        $papel = null;
-        if ($candRegente && ($candRegente == $outraRegente || $candRegente == $outraAssistente)) {
-            $papel = 'regente';
-        } elseif ($candAssistente && ($candAssistente == $outraRegente || $candAssistente == $outraAssistente)) {
-            $papel = 'assistente';
-        }
+        // RN01 — $papel é o papel do docente candidato NA AULA NOVA;
+        // $papelOutro é o papel que já tem na aula existente que colide —
+        // são frequentemente diferentes (ex.: assistente aqui, regente lá).
+        $papel = $papelOutro = null;
+        if ($candRegente && $candRegente == $outraRegente) { $papel = 'regente'; $papelOutro = 'regente'; }
+        elseif ($candRegente && $candRegente == $outraAssistente) { $papel = 'regente'; $papelOutro = 'assistente'; }
+        elseif ($candAssistente && $candAssistente == $outraRegente) { $papel = 'assistente'; $papelOutro = 'regente'; }
+        elseif ($candAssistente && $candAssistente == $outraAssistente) { $papel = 'assistente'; $papelOutro = 'assistente'; }
+
         if ($papel) {
+            $idDocConflito = $papel === 'regente' ? $candRegente : $candAssistente;
+            $nomeDoc = nomeDocentePorId($pdo, $idDocConflito) ?: 'Este docente';
             $problemas[] = ['tipo' => 'Docente', 'bloqueante' => true, 'outra_aula_id' => (int)$outra['id'],
-                'mensagem' => "O docente ($papel) já tem outra aula nesse horário ($onde)."];
+                'mensagem' => "$nomeDoc já é $papelOutro de \"" . ($outra['disciplina_nome'] ?? 'outra aula')
+                            . "\" nesta mesma $quandoCand, em $ondeComSala — não pode ficar também como $papel aqui."];
         }
 
         // RN02 — Conflito de Sala (qualquer curso)
         if (!empty($aula['sala_id']) && $outra['sala_id'] == $aula['sala_id']) {
+            $docenteOutra = $outra['regente_nome'] ?: null;
             $problemas[] = ['tipo' => 'Sala', 'bloqueante' => true, 'outra_aula_id' => (int)$outra['id'],
-                'mensagem' => "A sala já está ocupada nesse horário ($onde)."];
+                'mensagem' => "A sala \"" . ($outra['sala_nome'] ?? '—') . "\" já está ocupada nesta mesma $quandoCand por $onde"
+                            . ($docenteOutra ? " (docente {$docenteOutra})" : '') . "."];
         }
         // RN03 — Conflito de Turma (mesmo horário e mesmo subgrupo — RN07)
         $mesmoSub = ($outra['subgrupo'] ?? null) === ($aula['subgrupo'] ?? null);
         if ($outra['horario_id'] == $aula['horario_id'] && $mesmoSub) {
+            $subTxt = $aula['subgrupo'] ? " (subgrupo {$aula['subgrupo']})" : '';
             $problemas[] = ['tipo' => 'Turma', 'bloqueante' => true, 'outra_aula_id' => (int)$outra['id'],
-                'mensagem' => "Esta turma já tem \"" . ($outra['disciplina_nome'] ?? 'uma aula')
-                            . "\" marcada nesse horário."];
+                'mensagem' => "Esta turma$subTxt já tem \"" . ($outra['disciplina_nome'] ?? 'uma aula')
+                            . "\" marcada nesta mesma $quandoCand" . ($outra['sala_nome'] ? " (sala {$outra['sala_nome']})" : '') . "."];
         }
     }
 
     // RN04 — Capacidade de sala (aviso)
     if (!empty($aula['sala_id']) && !empty($aula['turma_id'])) {
         $stmt = $pdo->prepare(
-            "SELECT s.capacidade, t.num_alunos FROM salas s, turmas t
+            "SELECT s.nome AS sala_nome, s.capacidade, t.nome_turma, t.num_alunos FROM salas s, turmas t
              WHERE s.id = ? AND t.id = ?");
         $stmt->execute([$aula['sala_id'], $aula['turma_id']]);
         $cap = $stmt->fetch();
         if ($cap && $cap['num_alunos'] > 0 && $cap['num_alunos'] > $cap['capacidade']) {
+            $excesso = $cap['num_alunos'] - $cap['capacidade'];
             $problemas[] = ['tipo' => 'Capacidade', 'bloqueante' => false, 'outra_aula_id' => null,
-                'mensagem' => "A sala tem {$cap['capacidade']} lugares, mas a turma tem {$cap['num_alunos']} alunos."];
+                'mensagem' => "A sala \"{$cap['sala_nome']}\" tem {$cap['capacidade']} lugares, mas a turma "
+                            . "\"{$cap['nome_turma']}\" tem {$cap['num_alunos']} alunos — excede em $excesso lugar(es)."];
         }
     }
 
@@ -187,14 +221,14 @@ function revalidarHorario(PDO $pdo, int $horarioId): int {
     $stmt->execute([$horarioId]);
 
     $encontrados = [];
-    $ins = $pdo->prepare("INSERT INTO conflitos (aula_id_1, aula_id_2, tipo) VALUES (?,?,?)");
+    $ins = $pdo->prepare("INSERT INTO conflitos (aula_id_1, aula_id_2, tipo, mensagem) VALUES (?,?,?,?)");
     foreach ($stmt->fetchAll() as $aula) {
         foreach (verificarConflitos($pdo, $aula, (int)$aula['id']) as $p) {
             if ($p['bloqueante'] && $p['outra_aula_id']) {
                 $chave = $aula['id'] . '|' . $p['outra_aula_id'] . '|' . $p['tipo'];
                 $encontrados[$chave] = true;
                 if (!isset($existentes[$chave])) {
-                    $ins->execute([(int)$aula['id'], $p['outra_aula_id'], $p['tipo']]);
+                    $ins->execute([(int)$aula['id'], $p['outra_aula_id'], $p['tipo'], mb_substr($p['mensagem'], 0, 500)]);
                 }
             }
         }

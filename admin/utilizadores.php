@@ -66,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($nome === '' || $email === '' || !in_array($perfil, ['Administrador','Coordenador','Docente'])) {
         $erro = "Preenche o nome, o e-mail e o perfil.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $erro = "Este e-mail não parece válido.";
     } elseif (($id === 0 || $senha !== '') && strlen($senha) < 6) {
         $erro = "A palavra-passe deve ter pelo menos 6 caracteres.";
     } elseif ($perderiaUltimoAdmin) {
