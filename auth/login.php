@@ -20,14 +20,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $senha = $_POST['senha'] ?? '';
 
-    $stmt = $pdo->prepare("SELECT * FROM utilizadores WHERE email = ? AND ativo = 1");
+    // Nota: sem "AND ativo = 1" aqui — precisamos de saber se a password
+    // está certa mesmo numa conta ainda inativa (ex.: acabada de criar em
+    // auth/registar.php, à espera de aprovação do Administrador), para dar
+    // uma mensagem específica em vez do "e-mail ou palavra-passe incorretos"
+    // genérico. Só revela essa distinção depois de confirmar a password —
+    // com a password errada, continua a dar sempre o erro genérico.
+    $stmt = $pdo->prepare("SELECT * FROM utilizadores WHERE email = ?");
     $stmt->execute([$email]);
     $utilizador = $stmt->fetch();
 
     if ($utilizador && $utilizador['bloqueado_ate'] && strtotime($utilizador['bloqueado_ate']) > time()) {
         $minutos = (int)ceil((strtotime($utilizador['bloqueado_ate']) - time()) / 60);
         $erro = "Demasiadas tentativas falhadas. Tenta novamente daqui a $minutos minuto(s).";
-    } elseif ($utilizador && password_verify($senha, $utilizador['password_hash'])) {
+    } elseif ($utilizador && !$utilizador['ativo'] && password_verify($senha, $utilizador['password_hash'])) {
+        $erro = "A tua conta ainda não foi ativada por um Administrador. Tenta mais tarde ou contacta-o.";
+    } elseif ($utilizador && $utilizador['ativo'] && password_verify($senha, $utilizador['password_hash'])) {
         $pdo->prepare("UPDATE utilizadores SET tentativas_falhadas = 0, bloqueado_ate = NULL WHERE id = ?")
             ->execute([$utilizador['id']]);
 
@@ -128,6 +136,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="login-nota">
                 Acesso reservado à coordenação e ao corpo docente.<br>
                 Problemas com a conta? Contacta o administrador do sistema.
+            </p>
+            <p class="login-nota">
+                És docente e ainda não tens conta? <a href="<?= BASE_URL ?>/auth/registar.php" style="color:var(--cobalt);font-weight:600">Regista-te</a>
             </p>
         </div>
     </section>
