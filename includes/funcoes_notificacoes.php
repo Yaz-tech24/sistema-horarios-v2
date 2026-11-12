@@ -20,7 +20,7 @@ function notificarDocentesDoHorario(PDO $pdo, int $horarioId, string $mensagem, 
          FROM aulas a
          JOIN docentes u2 ON u2.id = a.docente_regente_id OR u2.id = a.docente_assistente_id
          JOIN utilizadores u ON u.id = u2.utilizador_id
-         WHERE a.horario_id = ?");
+         WHERE a.horario_id = ? AND a.tipo_bloco = 'Aula'");
     $stmt->execute([$horarioId]);
     $docentes = $stmt->fetchAll();
 
@@ -29,8 +29,11 @@ function notificarDocentesDoHorario(PDO $pdo, int $horarioId, string $mensagem, 
     $internas = 0;
     $emails = 0;
     $tentarEmail = $assuntoEmail !== null && smtpConfigurado();
+    // notificacoes.mensagem é VARCHAR(255) — o texto leva nomes de
+    // disciplinas/cursos e não pode fazer falhar a publicação por ser longo.
+    $mensagemCurta = mb_substr($mensagem, 0, 255);
     foreach ($docentes as $u) {
-        $ins->execute([$u['utilizador_id'], $mensagem]);
+        $ins->execute([$u['utilizador_id'], $mensagemCurta]);
         $internas++;
         if ($tentarEmail && !empty($u['email'])) {
             try {
@@ -41,6 +44,38 @@ function notificarDocentesDoHorario(PDO $pdo, int $horarioId, string $mensagem, 
         }
     }
     return ['internas' => $internas, 'emails' => $emails];
+}
+
+/* Contas de acesso (utilizadores.id) dos docentes — regente e assistente —
+   de uma aula, ou de todas as aulas de um horário. Docentes sem conta não
+   aparecem (não têm onde receber a notificação). */
+function utilizadoresDaAula(PDO $pdo, int $aulaId): array {
+    $stmt = $pdo->prepare(
+        "SELECT DISTINCT d.utilizador_id FROM aulas a
+         JOIN docentes d ON d.id = a.docente_regente_id OR d.id = a.docente_assistente_id
+         WHERE a.id = ? AND a.tipo_bloco = 'Aula' AND d.utilizador_id IS NOT NULL");
+    $stmt->execute([$aulaId]);
+    return array_map('intval', array_column($stmt->fetchAll(), 'utilizador_id'));
+}
+
+function utilizadoresDoHorario(PDO $pdo, int $horarioId): array {
+    $stmt = $pdo->prepare(
+        "SELECT DISTINCT d.utilizador_id FROM aulas a
+         JOIN docentes d ON d.id = a.docente_regente_id OR d.id = a.docente_assistente_id
+         WHERE a.horario_id = ? AND a.tipo_bloco = 'Aula' AND d.utilizador_id IS NOT NULL");
+    $stmt->execute([$horarioId]);
+    return array_map('intval', array_column($stmt->fetchAll(), 'utilizador_id'));
+}
+
+/* Uma notificação interna para cada conta indicada (repetidas contam uma
+   vez). Devolve quantas foram gravadas. */
+function notificarUtilizadores(PDO $pdo, array $utilizadorIds, string $mensagem, ?int $aulaId = null): int {
+    $ids = array_values(array_unique(array_map('intval', $utilizadorIds)));
+    if (!$ids) { return 0; }
+    $ins = $pdo->prepare("INSERT INTO notificacoes (utilizador_id, aula_id, mensagem) VALUES (?,?,?)");
+    $mensagemCurta = mb_substr($mensagem, 0, 255); // tamanho da coluna
+    foreach ($ids as $id) { $ins->execute([$id, $aulaId, $mensagemCurta]); }
+    return count($ids);
 }
 
 /* $manterLigacaoAula: false quando a aula está prestes a ser apagada (ex.:
@@ -60,5 +95,6 @@ function notificarDocenteDaAula(PDO $pdo, int $aulaId, string $mensagem, bool $m
     $ins = $pdo->prepare(
         "INSERT INTO notificacoes (utilizador_id, aula_id, mensagem) VALUES (?,?,?)");
     $aulaIdGravado = $manterLigacaoAula ? $aulaId : null;
-    foreach ($stmt->fetchAll() as $u) { $ins->execute([$u['utilizador_id'], $aulaIdGravado, $mensagem]); }
+    $mensagemCurta = mb_substr($mensagem, 0, 255); // tamanho da coluna
+    foreach ($stmt->fetchAll() as $u) { $ins->execute([$u['utilizador_id'], $aulaIdGravado, $mensagemCurta]); }
 }

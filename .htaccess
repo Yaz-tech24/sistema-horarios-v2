@@ -1,21 +1,40 @@
 # Segurança para produção — nunca servir estes ficheiros/pastas
 # diretamente, mesmo que alguém adivinhe o caminho.
 
-# .env, .sql, .md, .bat, .ini, .log — nada disto é para ser pedido
-# pelo browser; .sql em particular tem a estrutura da base de dados e
-# (em sql/seed2_contas_teste.sql) contas de teste.
-<FilesMatch "\.(env|sql|md|bat|ini|log)$">
+# .env, .sql, .md, .bat, .ini, .log, .yml, cópias de segurança de editores
+# (.bak, .swp, ficheiro~) — nada disto é para ser pedido pelo browser; .sql
+# em particular tem a estrutura da base de dados e (em
+# sql/seed2_contas_teste.sql) contas de teste.
+<FilesMatch "(\.(env|sql|md|bat|ini|log|yml|yaml|bak|old|orig|swp|dist|lock)|~)$">
     Require all denied
 </FilesMatch>
 
-# .git — se o repositório for clonado direto para a pasta do site,
-# isto impede descarregar o histórico todo do projeto.
-RedirectMatch 404 /\.git
+# Ficheiros de infraestrutura sem extensão reconhecível.
+<FilesMatch "^(Dockerfile|docker-compose.*|composer\.(json|lock)|\.dockerignore|\.gitignore|\.htaccess|\.env.*)$">
+    Require all denied
+</FilesMatch>
+
+# Tudo o que comece por ponto (.git, .env, .vscode, .claude…) — se o
+# repositório for clonado direto para a pasta do site, isto impede
+# descarregar o histórico todo do projeto. (.well-known fica de fora: é
+# onde o Let's Encrypt põe os ficheiros de validação do certificado.)
+RedirectMatch 404 "/\.(?!well-known/)"
+
+# includes/ e config/ só existem para serem carregados por require_once —
+# cada pasta tem ainda o seu próprio .htaccess a negar tudo, como sql/.
 
 <IfModule mod_headers.c>
-    Header always set X-Content-Type-Options "nosniff"
-    Header always set X-Frame-Options "SAMEORIGIN"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    # "setifempty" e não "set": as páginas PHP já enviam estes cabeçalhos
+    # (includes/seguranca.php — é lá que está também a Content-Security-
+    # Policy, que precisa de um valor novo a cada pedido). Aqui cobrem-se
+    # os ficheiros estáticos (CSS, JS, imagens), sem duplicar cabeçalhos.
+    Header setifempty X-Content-Type-Options "nosniff"
+    Header setifempty X-Frame-Options "SAMEORIGIN"
+    Header setifempty Referrer-Policy "strict-origin-when-cross-origin"
+    Header unset X-Powered-By
 </IfModule>
 
 Options -Indexes
+
+# Página inicial: só index.php (nunca um index.html esquecido na pasta).
+DirectoryIndex index.php

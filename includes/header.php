@@ -21,6 +21,8 @@ $menus = [
         ['relatorios/carga_docente.php', 'chart', 'Carga docente'],
         ['relatorios/ocupacao_salas.php', 'building', 'Ocupação de salas'],
         ['relatorios/salas_livres.php', 'door', 'Salas livres'],
+        ['relatorios/exportar.php', 'download', 'Exportar'],
+        ['admin/auditoria.php', 'lock', 'Registo de atividade'],
         ['conta.php', 'user', 'A minha conta'],
     ],
     'Coordenador' => [
@@ -74,6 +76,11 @@ if ($perfilAtual === 'Docente') {
     $stmtNotif->execute([$_SESSION['utilizador_id']]);
     $notificacoesPorLer = (int)$stmtNotif->fetchColumn();
 }
+
+// Contas criadas em auth/registar.php nascem inativas e ficam à espera do
+// Administrador — sem este contador, ele só dava por elas se fosse abrir a
+// lista de utilizadores por acaso.
+$contasPorAtivar = $perfilAtual === 'Administrador' ? contasPorAtivar($pdo) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -108,12 +115,16 @@ if ($perfilAtual === 'Docente') {
                     <?= icone($ic) ?><span><?= htmlspecialchars($rotulo) ?></span>
                     <?php if ($caminho === 'docente/notificacoes.php' && $notificacoesPorLer > 0): ?><em><?= $notificacoesPorLer ?></em><?php endif; ?>
                     <?php if ($caminho === 'coordenador/pedidos.php' && $pedidosAbertos > 0): ?><em><?= $pedidosAbertos ?></em><?php endif; ?>
+                    <?php if ($caminho === 'admin/utilizadores.php' && $contasPorAtivar > 0): ?><em title="Contas à espera de ativação"><?= $contasPorAtivar ?></em><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>
 
         <div class="sidebar-footer">
-            <a class="nav-item logout-link" href="<?= BASE_URL ?>/auth/logout.php"><?= icone('logout') ?><span>Terminar sessão</span></a>
+            <form method="post" action="<?= BASE_URL ?>/auth/logout.php">
+                <?= campoCSRF() ?>
+                <button type="submit" class="nav-item logout-link"><?= icone('logout') ?><span>Terminar sessão</span></button>
+            </form>
         </div>
     </aside>
 
@@ -129,6 +140,12 @@ if ($perfilAtual === 'Docente') {
             </div>
         </header>
         <section class="page-content">
+            <?php if (!empty($_SESSION['deve_mudar_senha'])): ?>
+            <div class="alert alert-error" role="alert">
+                <strong>Define uma palavra-passe só tua antes de continuar.</strong>
+                A que usaste para entrar é provisória — até a mudares, esta é a única página disponível.
+            </div>
+            <?php endif; ?>
             <div class="page-heading">
                 <div><h1><?= htmlspecialchars($pageTitle) ?></h1><?php if ($pageDescription): ?><p><?= htmlspecialchars($pageDescription) ?></p><?php endif; ?></div>
                 <?php if ($pageActions): ?><div class="page-actions"><?= $pageActions ?></div><?php endif; ?>

@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['eliminar'])) {
         try {
-            $pdo->prepare("DELETE FROM turmas WHERE id = ?")->execute([(int)$_POST['eliminar']]);
+            $pdo->prepare("DELETE FROM turmas WHERE id = ?")->execute([(int)postTexto('eliminar', 12)]);
             $sucesso = true; $mensagem = 'Turma eliminada.';
         } catch (PDOException $e) {
             $sucesso = false; $mensagem = 'Não é possível eliminar: esta turma já tem um horário associado.';
@@ -20,57 +20,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: turmas.php'); exit;
     }
 
-    $curso_id = (int)($_POST['curso_id'] ?? 0);
-    $ano      = (int)($_POST['ano_curricular'] ?? 0);
-    $regime   = $_POST['regime'] ?? 'Laboral';
+    $curso_id = (int)postTexto('curso_id', 12);
+    $ano      = (int)postTexto('ano_curricular', 3);
+    // ENUM na base de dados — só os dois valores do formulário.
+    $regime   = ($_POST['regime'] ?? '') === 'Pos-Laboral' ? 'Pos-Laboral' : 'Laboral';
     // O turno NUNCA vem do formulário — é sempre calculado no servidor a
     // partir de (ano_curricular, regime). O <select> livre foi removido.
     $turno    = calcularTurno($ano, $regime);
-    $nome     = trim($_POST['nome_turma'] ?? 'A');
-    $alunos   = (int)($_POST['num_alunos'] ?? 0);
-    $salaPadrao = (int)($_POST['sala_padrao_id'] ?? 0) ?: null;
-    $id       = (int)($_POST['id'] ?? 0);
+    $nome     = postTexto('nome_turma', 10) ?: 'A';
+    $alunos   = max(0, min(2000, (int)postTexto('num_alunos', 6)));
+    $salaPadrao = (int)postTexto('sala_padrao_id', 12) ?: null;
+    $id       = (int)postTexto('id', 12);
 
     if ($curso_id <= 0 || $ano < 1 || $ano > 5) {
         $erro = "Escolhe o curso e um ano válido.";
     } else {
-        // Se o turno vai mudar (ano/regime diferentes dos gravados) e já
-        // existem aulas marcadas para esta turma, bloqueia: mudar o turno
-        // deixaria essas aulas fora dos blocos da grelha (blocosDoTurno()),
-        // "desaparecidas" do Editor sem serem removidas da base de dados.
+        // Curso, ano e regime definem o horário da turma: as disciplinas que
+        // lá podem estar (curso + ano) e os blocos da grelha (o turno, que
+        // vem do ano e do regime). Com aulas já marcadas, mudar qualquer um
+        // deles deixava o horário com disciplinas de outro ano/curso, ou com
+        // aulas fora da grelha — "desaparecidas" do Editor sem terem sido
+        // removidas. Antes só se travava a mudança de turno; mudar o ano de
+        // 1º para 3º (os dois de Manhã) passava e deixava as disciplinas do
+        // 1º ano no horário do 3º.
         $bloqueadoPorAulas = false;
+        $mudaEstrutura = false;
         if ($id > 0) {
-            $stmt = $pdo->prepare("SELECT turno FROM turmas WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT curso_id, ano_curricular, regime, turno FROM turmas WHERE id = ?");
             $stmt->execute([$id]);
-            $turnoAntigo = $stmt->fetchColumn();
+            $antiga = $stmt->fetch();
 
-            if ($turnoAntigo && $turnoAntigo !== $turno) {
+            if ($antiga && ((int)$antiga['curso_id'] !== $curso_id || (int)$antiga['ano_curricular'] !== $ano
+                            || $antiga['regime'] !== $regime)) {
+                $mudaEstrutura = true;
+                // Só contam aulas a sério. A Pastoral e o Estudo Autónomo são
+                // criados pelo sistema e voltam a ser criados no sítio certo
+                // (são apagados abaixo) — contá-los deixava a turma presa para
+                // sempre assim que alguém abrisse o Editor.
                 $stmt = $pdo->prepare(
                     "SELECT COUNT(*) FROM aulas a JOIN horarios h ON a.horario_id = h.id
-                     WHERE h.turma_id = ? AND h.estado != 'Arquivado'");
+                     WHERE h.turma_id = ? AND h.estado != 'Arquivado' AND a.tipo_bloco = 'Aula'");
                 $stmt->execute([$id]);
                 if ((int)$stmt->fetchColumn() > 0) {
                     $bloqueadoPorAulas = true;
                     $traduz = fn($t) => str_replace(['Manha','Tarde'], ['Manhã','Tarde'], $t);
-                    $erro = "Não é possível mudar o ano/regime desta turma: o turno passaria de "
-                          . $traduz($turnoAntigo) . " para " . $traduz($turno) . ", mas já existem aulas marcadas "
-                          . "no horário atual (ficariam fora da grelha). Arquiva o horário desta turma primeiro "
+                    $erro = "Não é possível mudar o curso, o ano ou o regime desta turma: o horário atual já tem aulas "
+                          . "marcadas para o " . (int)$antiga['ano_curricular'] . "º ano em regime " . $antiga['regime']
+                          . " (turno da " . $traduz($antiga['turno']) . "). Arquiva o horário desta turma primeiro "
                           . "(Coordenador → Publicar → Arquivar) ou remove as aulas no Editor de Horário.";
                 }
             }
         }
 
         if (!$bloqueadoPorAulas) {
-            if ($id > 0) {
-                $stmt = $pdo->prepare("UPDATE turmas SET curso_id=?, ano_curricular=?, regime=?, turno=?, nome_turma=?, num_alunos=?, sala_padrao_id=? WHERE id=?");
-                $stmt->execute([$curso_id, $ano, $regime, $turno, $nome, $alunos, $salaPadrao, $id]);
-                definirFlash('ok', 'Turma atualizada.');
-            } else {
-                $stmt = $pdo->prepare("INSERT INTO turmas (curso_id, ano_curricular, regime, turno, nome_turma, num_alunos, sala_padrao_id) VALUES (?,?,?,?,?,?,?)");
-                $stmt->execute([$curso_id, $ano, $regime, $turno, $nome, $alunos, $salaPadrao]);
-                definirFlash('ok', 'Turma criada.');
+            try {
+                if ($id > 0) {
+                    $pdo->beginTransaction();
+                    $stmt = $pdo->prepare("UPDATE turmas SET curso_id=?, ano_curricular=?, regime=?, turno=?, nome_turma=?, num_alunos=?, sala_padrao_id=? WHERE id=?");
+                    $stmt->execute([$curso_id, $ano, $regime, $turno, $nome, $alunos, $salaPadrao, $id]);
+                    if ($mudaEstrutura) {
+                        // Sem aulas (verificado acima): só restam blocos não letivos
+                        // do turno/ano antigo. A Pastoral volta a ser criada no
+                        // bloco certo da próxima vez que o Editor abrir.
+                        $stmt = $pdo->prepare(
+                            "SELECT a.id, a.horario_id FROM aulas a JOIN horarios h ON a.horario_id = h.id
+                             WHERE h.turma_id = ? AND h.estado != 'Arquivado' AND a.tipo_bloco != 'Aula'");
+                        $stmt->execute([$id]);
+                        $porHorario = [];
+                        foreach ($stmt->fetchAll() as $b) { $porHorario[(int)$b['horario_id']][] = (int)$b['id']; }
+                        foreach ($porHorario as $hid => $ids) { removerBlocos($pdo, $hid, $ids); }
+                    }
+                    $pdo->commit();
+                    definirFlash('ok', 'Turma atualizada.');
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO turmas (curso_id, ano_curricular, regime, turno, nome_turma, num_alunos, sala_padrao_id) VALUES (?,?,?,?,?,?,?)");
+                    $stmt->execute([$curso_id, $ano, $regime, $turno, $nome, $alunos, $salaPadrao]);
+                    definirFlash('ok', 'Turma criada.');
+                }
+                header('Location: turmas.php'); exit;
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                error_log('Erro ao guardar turma: ' . $e->getMessage());
+                $erro = "Não foi possível guardar: o curso ou a sala escolhida já não existe. Atualiza a página.";
             }
-            header('Location: turmas.php'); exit;
         }
     }
 }
@@ -143,7 +175,7 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <p style="grid-column:1/-1;margin:0;color:var(--ink-soft);font-size:.78rem;">
                 Laboral: 1º/3º → Manhã, 2º/4º → Tarde. Pós-Laboral: sempre Noite.
-                Se a turma já tiver aulas marcadas, mudar o turno fica bloqueado.
+                Se a turma já tiver aulas marcadas, mudar o curso, o ano ou o regime fica bloqueado.
                 A sala habitual é só sugestão para a geração automática — o laboratório
                 de uma disciplina prática (RN16) continua a ter prioridade.
             </p>
@@ -196,7 +228,7 @@ require_once __DIR__ . '/../includes/header.php';
 </section>
 <?php endif; ?>
 
-<script>
+<script nonce="<?= nonceCSP() ?>">
 // Pré-visualização apenas — o valor gravado vem sempre de calcularTurno()
 // no servidor (admin/turmas.php), nunca deste script.
 (function () {

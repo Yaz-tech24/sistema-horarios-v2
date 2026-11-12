@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/funcoes_coordenador.php';
 
 if (isset($_POST['curso_id'])) {
     validarCSRF();
-    $cid = (int)$_POST['curso_id'];
+    $cid = (int)postTexto('curso_id', 12);
     // Só aceita cursos realmente atribuídos a este coordenador
     $stmt = $pdo->prepare("SELECT 1 FROM coordenador_curso WHERE utilizador_id=? AND curso_id=?");
     $stmt->execute([$_SESSION['utilizador_id'], $cid]);

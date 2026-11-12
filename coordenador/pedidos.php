@@ -24,7 +24,7 @@ function pedidoDoCurso(PDO $pdo, int $pedidoId, int $cursoId): ?array {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validarCSRF();
-    $pid = (int)($_POST['pedido_id'] ?? 0);
+    $pid = (int)postTexto('pedido_id', 12);
     $novoEstado = ($_POST['acao'] ?? '') === 'reabrir' ? 'Aberto' : 'Resolvido';
 
     if (!pedidoDoCurso($pdo, $pid, $cursoId)) {

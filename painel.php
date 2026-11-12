@@ -2,6 +2,11 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/funcoes_coordenador.php';
 
+// Antes de tocar em $_SESSION['perfil']: sem sessão, a linha seguinte dava
+// um aviso do PHP e as queries abaixo corriam para um visitante anónimo
+// (o header só redirecionava para o login depois de tudo isso).
+exigirLogin();
+
 $perfil = $_SESSION['perfil'];
 
 // Módulos por perfil: [título, descrição, link, dono]
@@ -14,6 +19,7 @@ $modulos = [
         ['Turmas', 'Turmas por curso, ano, regime e turno.', '/admin/turmas.php', 'calendar'],
         ['Utilizadores', 'Contas de acesso e cursos de cada coordenador.', '/admin/utilizadores.php', 'shield'],
         ['Relatórios', 'Ocupação de salas e carga docente.', '/relatorios/ocupacao_salas.php', 'chart'],
+        ['Registo de atividade', 'Entradas, tentativas falhadas e alterações de contas.', '/admin/auditoria.php', 'lock'],
     ],
     'Coordenador' => [
         ['Escolher Curso', 'Selecionar o curso com que vais trabalhar.', '/coordenador/escolher_curso.php', 'book'],
@@ -39,6 +45,7 @@ if ($perfil === 'Administrador') {
     $stats[] = ['calendar', (int)$pdo->query("SELECT COUNT(DISTINCT turma_id) FROM horarios WHERE estado='Publicado'")->fetchColumn(), 'Turmas com horário publicado', 'accent-purple'];
     $nConf = (int)$pdo->query("SELECT COUNT(*) FROM conflitos WHERE estado='Pendente'")->fetchColumn();
     $stats[] = ['alert', $nConf, 'Conflitos pendentes', 'accent-orange'];
+    $nPorAtivar = contasPorAtivar($pdo);
 } elseif ($perfil === 'Coordenador') {
     $meusCursos = cursosDoCoordenador($pdo);
     $idsCursos = array_column($meusCursos, 'id');
@@ -80,6 +87,14 @@ $pageTitle = 'Visão geral';
 $pageDescription = 'Olá, ' . explode(' ', $_SESSION['nome'])[0] . '. Estás com sessão iniciada como ' . $perfil . '.';
 require_once __DIR__ . '/includes/header.php';
 ?>
+
+<?php if (!empty($nPorAtivar)): ?>
+<div class="alert alert-success" style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <span><strong><?= (int)$nPorAtivar ?> conta(s) de docente à espera de ativação.</strong>
+        Confirma que quem se registou é mesmo o docente antes de ativar.</span>
+    <a class="btn btn-secondary btn-sm" href="<?= BASE_URL ?>/admin/utilizadores.php">Ver utilizadores</a>
+</div>
+<?php endif; ?>
 
 <?php if ($stats): ?>
 <div class="grid stats-grid">

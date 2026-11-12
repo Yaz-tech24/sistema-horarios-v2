@@ -70,9 +70,45 @@ function iniciarRevisaoSeRascunho(PDO $pdo, array &$horario): void {
 }
 
 function registarHistorico(PDO $pdo, int $horarioId, string $descricao): void {
+    // Cortado ao tamanho da coluna (VARCHAR 255): a descrição leva nomes de
+    // disciplinas, e um nome comprido não pode fazer falhar a ação em si.
     $pdo->prepare(
         "INSERT INTO historico_versoes (horario_id, utilizador_id, descricao) VALUES (?,?,?)")
-        ->execute([$horarioId, $_SESSION['utilizador_id'], $descricao]);
+        ->execute([$horarioId, $_SESSION['utilizador_id'], mb_substr($descricao, 0, 255)]);
+}
+
+/* O horário em sessão (horario_id_atual), confirmado contra o curso que o
+   coordenador tem aberto. O id em sessão é sempre posto pelo Editor depois
+   de validar a turma, mas Publicar/Conflitos/Histórico agem sobre ele sem
+   passar pelo Editor — confirmar aqui garante que nenhuma delas publica,
+   arquiva ou mostra um horário de outro curso, aconteça o que acontecer à
+   sessão pelo caminho (ex.: o curso ser retirado ao coordenador a meio). */
+function horarioDoCursoEmSessao(PDO $pdo, array $curso): ?array {
+    $horarioId = (int)($_SESSION['horario_id_atual'] ?? 0);
+    if ($horarioId <= 0) { return null; }
+    $stmt = $pdo->prepare(
+        "SELECT h.* FROM horarios h
+         JOIN turmas t ON t.id = h.turma_id
+         WHERE h.id = ? AND t.curso_id = ?");
+    $stmt->execute([$horarioId, $curso['id']]);
+    $horario = $stmt->fetch();
+    if (!$horario) {
+        unset($_SESSION['horario_id_atual']);
+        return null;
+    }
+    return $horario;
+}
+
+/* Apaga blocos de um horário e solta tudo o que lhes aponta (conflitos são
+   apagados; notificações e pedidos ficam, só sem ligação ao bloco). */
+function removerBlocos(PDO $pdo, int $horarioId, array $aulaIds): void {
+    $ids = array_values(array_unique(array_map('intval', $aulaIds)));
+    if (!$ids) { return; }
+    $marcas = implode(',', array_fill(0, count($ids), '?'));
+    $pdo->prepare("DELETE FROM conflitos WHERE aula_id_1 IN ($marcas) OR aula_id_2 IN ($marcas)")->execute([...$ids, ...$ids]);
+    $pdo->prepare("UPDATE notificacoes SET aula_id = NULL WHERE aula_id IN ($marcas)")->execute($ids);
+    $pdo->prepare("UPDATE pedidos SET aula_id = NULL WHERE aula_id IN ($marcas)")->execute($ids);
+    $pdo->prepare("DELETE FROM aulas WHERE horario_id = ? AND id IN ($marcas)")->execute([$horarioId, ...$ids]);
 }
 
 const DIAS_SEMANA = ['Segunda','Terca','Quarta','Quinta','Sexta'];
@@ -142,6 +178,44 @@ function garantirPastoral(PDO $pdo, array $horario, array $turma): void {
         ->execute([$horario['id'], $bp[0], $bp[1]]);
 }
 
+/* Salas a experimentar, por ordem de preferência, para uma aula da geração
+   automática ([null] se não houver salas nenhumas):
+   - sala fixa escolhida no formulário de geração → só essa;
+   - laboratório da disciplina (RN16) → só esse (é onde a disciplina tem
+     de decorrer; se estiver sempre ocupado, fica por agendar e o resumo
+     diz porquê);
+   - senão: a sala habitual da turma primeiro (é só sugestão — se estiver
+     ocupada, segue para as outras), depois as salas onde a turma cabe, das
+     mais pequenas para as maiores, preferindo salas normais a auditórios e
+     a laboratórios (estes ficam livres para as disciplinas práticas). Se
+     nenhuma sala tiver lugares que cheguem, todas, das maiores para as
+     mais pequenas (a aula fica com aviso de capacidade, RN04). */
+function salasCandidatas(array $salas, array $turma, array $disc, ?int $salaForcada): array {
+    if ($salaForcada) { return [$salaForcada]; }
+    if (!empty($disc['sala_id'])) { return [(int)$disc['sala_id']]; }
+    if (!$salas) { return [null]; }
+
+    $alunos = (int)$turma['num_alunos'];
+    $ordemTipo = ['Normal' => 0, 'Auditorio' => 1, 'Laboratorio' => 2];
+    $cabem = array_values(array_filter($salas, fn($s) => (int)$s['capacidade'] >= $alunos));
+    if ($cabem) {
+        usort($cabem, fn($a, $b) =>
+            [$ordemTipo[$a['tipo']] ?? 3, (int)$a['capacidade'], (int)$a['id']]
+            <=> [$ordemTipo[$b['tipo']] ?? 3, (int)$b['capacidade'], (int)$b['id']]);
+        $ids = array_map(fn($s) => (int)$s['id'], $cabem);
+    } else {
+        $todas = $salas;
+        usort($todas, fn($a, $b) => [(int)$b['capacidade'], (int)$a['id']] <=> [(int)$a['capacidade'], (int)$b['id']]);
+        $ids = array_map(fn($s) => (int)$s['id'], $todas);
+    }
+
+    if (!empty($turma['sala_padrao_id'])) {
+        $habitual = (int)$turma['sala_padrao_id'];
+        $ids = array_merge([$habitual], array_values(array_diff($ids, [$habitual])));
+    }
+    return $ids;
+}
+
 /* Geração automática do horário de uma turma a partir das disciplinas do
    curso+ano. Nunca reimplementa deteção de conflitos: cada slot candidato
    passa sempre por verificarConflitos() (definida em funcoes_conflitos.php
@@ -166,6 +240,14 @@ function gerarHorarioAutomatico(PDO $pdo, array $horario, array $turma, array $c
         // pelo menos uma notificação por resolver.
         $pdo->prepare(
             "UPDATE notificacoes SET aula_id = NULL
+             WHERE aula_id IN (SELECT id FROM aulas WHERE horario_id=?)")
+            ->execute([$horario['id']]);
+        // O mesmo para os pedidos dos docentes (pedidos.aula_id → aulas.id):
+        // bastava um docente ter assinalado um problema numa aula deste
+        // horário para "Limpar tudo e gerar de novo" falhar. O pedido fica
+        // (com o texto de referência), só perde a ligação à aula apagada.
+        $pdo->prepare(
+            "UPDATE pedidos SET aula_id = NULL
              WHERE aula_id IN (SELECT id FROM aulas WHERE horario_id=?)")
             ->execute([$horario['id']]);
         $pdo->prepare("DELETE FROM aulas WHERE horario_id=?")->execute([$horario['id']]);
@@ -194,7 +276,7 @@ function gerarHorarioAutomatico(PDO $pdo, array $horario, array $turma, array $c
     $stmt = $pdo->prepare("SELECT * FROM disciplinas WHERE curso_id=? AND ano_curricular=? ORDER BY nome");
     $stmt->execute([$curso['id'], $turma['ano_curricular']]);
     $disciplinas = $stmt->fetchAll();
-    $salas = $pdo->query("SELECT * FROM salas ORDER BY capacidade")->fetchAll();
+    $salas = $pdo->query("SELECT * FROM salas ORDER BY capacidade, id")->fetchAll();
 
     $insAula = $pdo->prepare(
         "INSERT INTO aulas (horario_id, disciplina_id, docente_id, docente_regente_id, docente_assistente_id,
@@ -217,6 +299,7 @@ function gerarHorarioAutomatico(PDO $pdo, array $horario, array $turma, array $c
         $stmt->execute([$horario['id'], $disc['id']]);
         $diasUsados = array_column($stmt->fetchAll(), 'dia_semana');
         $sessoesRestantes = $sessoesNecessarias - count($diasUsados);
+        $candidatasSala = salasCandidatas($salas, $turma, $disc, $salaForcada);
 
         for ($i = 0; $i < $sessoesRestantes; $i++) {
             $alocado = false;
@@ -224,38 +307,33 @@ function gerarHorarioAutomatico(PDO $pdo, array $horario, array $turma, array $c
             foreach ($slotsLivres as $idx => [$d, $hi, $hf]) {
                 if (in_array($d, $diasUsados, true)) { continue; } // RN09: nunca 2x no mesmo dia
 
-                if ($salaForcada) {
-                    $salaId = $salaForcada;
-                } elseif (!empty($disc['sala_id'])) {
-                    // Disciplina Prática/Laboratorial com laboratório próprio
-                    // (admin/disciplinas.php) — usa-o em vez da escolha por
-                    // capacidade, é a sala onde a disciplina costuma decorrer.
-                    $salaId = $disc['sala_id'];
-                } elseif (!empty($turma['sala_padrao_id'])) {
-                    // Sem laboratório específico — usa a sala habitual desta
-                    // turma (ver admin/turmas.php), em vez de escolher só por
-                    // capacidade.
-                    $salaId = $turma['sala_padrao_id'];
-                } else {
-                    $salaId = null;
-                    foreach ($salas as $s) {
-                        if ($s['capacidade'] >= (int)$turma['num_alunos']) { $salaId = $s['id']; break; }
-                    }
-                    if ($salaId === null && $salas) { $salaId = $salas[array_key_last($salas)]['id']; }
-                }
-
                 $candidato = [
                     'horario_id' => (int)$horario['id'], 'turma_id' => (int)$turma['id'],
                     'tipo_bloco' => 'Aula', 'disciplina_id' => (int)$disc['id'],
                     'docente_id' => (int)$disc['docente_regente_id'],
                     'docente_regente_id' => (int)$disc['docente_regente_id'],
                     'docente_assistente_id' => $disc['docente_assistente_id'] ? (int)$disc['docente_assistente_id'] : null,
-                    'sala_id' => $salaId, 'subgrupo' => null,
+                    'sala_id' => null, 'subgrupo' => null,
                     'dia_semana' => $d, 'hora_inicio' => $hi, 'hora_fim' => $hf,
                 ];
 
-                $problemas = verificarConflitos($pdo, $candidato);
-                if (array_filter($problemas, fn($p) => $p['bloqueante'])) { continue; }
+                // Experimenta as salas pela ordem de preferência. Antes era
+                // sempre a mesma sala (a primeira com lugares): se estivesse
+                // ocupada nesse bloco, o bloco era saltado, mesmo havendo
+                // outras salas livres — com várias turmas, todas disputavam
+                // a mesma sala e as disciplinas ficavam "por agendar".
+                $problemas = null;
+                foreach ($candidatasSala as $salaTentada) {
+                    $candidato['sala_id'] = $salaTentada;
+                    $tentativa = verificarConflitos($pdo, $candidato);
+                    $bloqueantes = array_filter($tentativa, fn($p) => $p['bloqueante']);
+                    if (!$bloqueantes) { $problemas = $tentativa; break; }
+                    // Docente ocupado, turma ocupada, carga (RN09)… — mudar de
+                    // sala não resolve; passa ao bloco seguinte.
+                    if (array_filter($bloqueantes, fn($p) => $p['tipo'] !== 'Sala')) { break; }
+                }
+                if ($problemas === null) { continue; }
+                $salaId = $candidato['sala_id'];
 
                 $insAula->execute([
                     $horario['id'], $disc['id'], $candidato['docente_id'], $candidato['docente_regente_id'],

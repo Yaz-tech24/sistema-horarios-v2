@@ -21,6 +21,15 @@ function smtpConfigurado(): bool {
     return (bool) getenv('SMTP_HOST');
 }
 
+/* A recuperação de palavra-passe por e-mail só existe se houver como
+   enviar o e-mail (SMTP) E um endereço público de confiança para pôr no
+   link (APP_URL em produção — ver urlPublica() em includes/seguranca.php).
+   Sem as duas coisas, o link "Esqueci-me da palavra-passe" nem aparece e
+   quem se esquecer continua a pedir ao Administrador, como antes. */
+function recuperacaoDisponivel(): bool {
+    return smtpConfigurado() && urlPublica() !== null;
+}
+
 function smtpLerResposta($socket): string {
     $resposta = '';
     while (($linha = fgets($socket, 515)) !== false) {
@@ -69,7 +78,10 @@ function enviarEmailSmtp(string $paraEmail, string $paraNome, string $assunto, s
     $paraEmail = semQuebrasDeLinha($paraEmail);
     $paraNome  = semQuebrasDeLinha($paraNome);
     $assunto   = semQuebrasDeLinha($assunto);
-    if ($paraEmail === '' || !str_contains($paraEmail, '@')) { return false; }
+    // Validação completa do endereço, não só "tem um @": o valor vai para
+    // dentro de RCPT TO:<...>, e um ">" ou um espaço ali no meio permitia
+    // acrescentar parâmetros ao comando.
+    if (!filter_var($paraEmail, FILTER_VALIDATE_EMAIL)) { return false; }
     $porta = getenv('SMTP_PORT') !== false ? (int)getenv('SMTP_PORT') : 465;
     $utilizador = getenv('SMTP_USER') ?: '';
     $palavraPasse = getenv('SMTP_PASS') ?: '';
@@ -78,17 +90,32 @@ function enviarEmailSmtp(string $paraEmail, string $paraNome, string $assunto, s
     $seguranca = getenv('SMTP_SECURE') ?: ($porta === 587 ? 'tls' : 'ssl');
 
     $endereco = ($seguranca === 'ssl' ? 'ssl://' : 'tcp://') . $host . ':' . $porta;
+    // peer_name explícito: no caminho STARTTLS a ligação nasce como tcp://
+    // e só depois é cifrada — assim o certificado é sempre conferido contra
+    // o nome do servidor que configurámos, não contra o que ele disser.
     $contexto = stream_context_create(['ssl' => [
-        'verify_peer' => true, 'verify_peer_name' => true,
+        'verify_peer' => true, 'verify_peer_name' => true, 'peer_name' => $host,
     ]]);
-    $socket = @stream_socket_client($endereco, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $contexto);
+    // Se o servidor de e-mail já falhou a ligação neste pedido, não volta a
+    // tentar: ao publicar, cada docente era uma tentativa nova de 15
+    // segundos, e com o SMTP em baixo a publicação de um horário com 20
+    // docentes demorava 5 minutos e acabava cortada pelo limite de tempo do
+    // PHP a meio das notificações.
+    static $servidorEmBaixo = false;
+    if ($servidorEmBaixo) { return false; }
+
+    $socket = @stream_socket_client($endereco, $errno, $errstr, 10, STREAM_CLIENT_CONNECT, $contexto);
     if (!$socket) {
-        error_log("SMTP: falha a ligar a $host:$porta — $errstr");
+        $servidorEmBaixo = true;
+        error_log("SMTP: falha a ligar a $host:$porta — $errstr (os restantes e-mails deste pedido não são tentados)");
         return false;
     }
     stream_set_timeout($socket, 15);
 
-    $dominioLocal = $_SERVER['SERVER_NAME'] ?? 'localhost';
+    // SERVER_NAME pode vir do cabeçalho Host do pedido (depende da
+    // configuração do Apache) — só letras, algarismos, pontos e hífenes
+    // chegam ao comando EHLO.
+    $dominioLocal = preg_replace('/[^A-Za-z0-9.\-]/', '', $_SERVER['SERVER_NAME'] ?? '') ?: 'localhost';
     try {
         smtpLerResposta($socket); // saudação 220
         smtpComando($socket, "EHLO $dominioLocal", '250');

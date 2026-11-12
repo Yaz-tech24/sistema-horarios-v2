@@ -4,8 +4,10 @@ exigirPerfil(['Coordenador']);
 require_once __DIR__ . '/../includes/funcoes_coordenador.php';
 
 $curso = exigirCursoDoCoordenador($pdo);
-$horarioId = (int)($_SESSION['horario_id_atual'] ?? 0);
-if (!$horarioId) { header('Location: ' . BASE_URL . '/coordenador/editor_horario.php'); exit; }
+// Confirma que o horário em sessão é mesmo de uma turma do curso aberto.
+$horarioAtual = horarioDoCursoEmSessao($pdo, $curso);
+if (!$horarioAtual) { header('Location: ' . BASE_URL . '/coordenador/editor_horario.php'); exit; }
+$horarioId = (int)$horarioAtual['id'];
 
 $stmt = $pdo->prepare(
     "SELECT hv.*, u.nome AS utilizador FROM historico_versoes hv

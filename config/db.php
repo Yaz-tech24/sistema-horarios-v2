@@ -35,9 +35,28 @@ $producao = getenv('APP_ENV') === 'producao';
 // log de erros do servidor, para se poder investigar.
 error_reporting(E_ALL);
 ini_set('display_errors', $producao ? '0' : '1');
+ini_set('log_errors', '1');
+
+// Exceções que nenhuma página apanhe: log completo no servidor, frase
+// neutra no browser (ver includes/seguranca.php).
+require_once __DIR__ . '/../includes/seguranca.php';
+instalarTratamentoDeErros($producao);
+
+// Fuso horário único para o PHP e para a ligação MySQL (mais abaixo).
+// Sem isto cada um usava o seu por omissão — e como o bloqueio do login
+// grava a hora com o NOW() do MySQL mas era comparado com o time() do
+// PHP, um desfasamento entre os dois tornava o bloqueio de 5 minutos em
+// horas (ou em nada). Também é o que faz as datas do histórico e das
+// notificações aparecerem na hora de Moçambique e não em UTC.
+$fuso = getenv('APP_TIMEZONE') ?: 'Africa/Maputo';
+if (!@date_default_timezone_set($fuso)) { date_default_timezone_set('Africa/Maputo'); }
 
 if (!defined('BASE_URL')) {
-    define('BASE_URL', getenv('BASE_URL') !== false ? getenv('BASE_URL') : '/sistema-horarios-fagrenm');
+    // Sem barra final e só caracteres de caminho — vai para dentro de
+    // href/Location em todas as páginas.
+    $base = getenv('BASE_URL') !== false ? getenv('BASE_URL') : '/sistema-horarios-fagrenm';
+    $base = rtrim(preg_replace('#[^A-Za-z0-9/_\-.~]#', '', $base), '/');
+    define('BASE_URL', $base);
 }
 
 $host   = getenv('DB_HOST') !== false ? getenv('DB_HOST') : 'localhost';
@@ -47,13 +66,29 @@ $user   = getenv('DB_USER') !== false ? getenv('DB_USER') : 'root';
 $pass   = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
 
 try {
+    $opcoes = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ];
+    // Uma instrução por chamada: mesmo que alguma query viesse a ser
+    // construída com input do utilizador, não dava para lhe colar um
+    // segundo comando ("; DROP TABLE ...").
+    // (Pdo\Mysql existe a partir do PHP 8.4, onde a constante antiga em
+    // PDO:: passou a estar marcada como obsoleta.)
+    if (class_exists('Pdo\Mysql')) {
+        $opcoes[\Pdo\Mysql::ATTR_MULTI_STATEMENTS] = false;
+    } elseif (defined('PDO::MYSQL_ATTR_MULTI_STATEMENTS')) {
+        $opcoes[constant('PDO::MYSQL_ATTR_MULTI_STATEMENTS')] = false;
+    }
     $pdo = new PDO(
         "mysql:host=$host" . ($porta ? ";port=$porta" : '') . ";dbname=$dbname;charset=utf8mb4",
         $user,
-        $pass
+        $pass,
+        $opcoes
     );
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    // date('P') = desvio do fuso do PHP (ex.: "+02:00") — funciona mesmo
+    // que o MySQL não tenha as tabelas de fusos horários carregadas.
+    $pdo->exec("SET time_zone = " . $pdo->quote(date('P')));
 } catch (PDOException $e) {
     error_log('Erro de ligação à base de dados: ' . $e->getMessage());
     if ($producao) {

@@ -17,6 +17,24 @@ function nomeDocentePorId(PDO $pdo, ?int $id): ?string {
     return $cache[$id];
 }
 
+/* RN07 — subgrupos. Um subgrupo é um texto livre ("P1", "a"…); para
+   comparar, conta só o texto sem espaços e em maiúsculas ("a" = "A").
+   Vazio = aula para a turma inteira. */
+function normalizarSubgrupo(?string $subgrupo): ?string {
+    $s = mb_strtoupper(trim((string)$subgrupo));
+    return $s === '' ? null : $s;
+}
+
+/* Duas aulas da mesma turma envolvem os mesmos alunos se forem do mesmo
+   subgrupo — ou se uma delas for para a turma inteira (sem subgrupo), que
+   inclui os alunos de todos os subgrupos. Só subgrupos diferentes (P1 e
+   P2) são grupos de alunos separados. */
+function subgruposSobrepoem(?string $a, ?string $b): bool {
+    $a = normalizarSubgrupo($a);
+    $b = normalizarSubgrupo($b);
+    return $a === null || $b === null || $a === $b;
+}
+
 function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): array {
     $problemas = [];
     $diaCand = $aula['dia_semana'] ?? '';
@@ -36,7 +54,12 @@ function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): 
         $turmaInfo = $stmt->fetch();
         if ($turmaInfo && $turmaInfo['regime'] === 'Laboral') {
             $bp = blocoPastoral($turmaInfo['turno']);
-            $ehEsseSlot = $bp && $aula['hora_inicio'] === $bp[0] && $aula['hora_fim'] === $bp[1];
+            // $hiCand/$hfCand (já cortados a "HH:MM") e não $aula['hora_*']:
+            // do formulário as horas vêm como "08:45", mas da base de dados
+            // (revalidarHorario) vêm como "08:45:00" — a comparação direta
+            // nunca batia e a revalidação deixava passar uma aula em cima da
+            // Pastoral.
+            $ehEsseSlot = $bp && $hiCand === $bp[0] && $hfCand === $bp[1];
             if ($ehEsseSlot && ($aula['tipo_bloco'] ?? 'Aula') !== 'Atividade_Nao_Letiva') {
                 $stmt2 = $pdo->prepare(
                     "SELECT id FROM aulas WHERE horario_id=? AND dia_semana='Quarta'
@@ -64,14 +87,19 @@ function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): 
     // Terça não é). Nenhum destes três casos foi pedido explicitamente
     // nas regras de negócio originais, mas fazem pouco sentido pedagógico
     // de outra forma, por isso tratam-se também como bloqueantes.
+    // Com subgrupos (RN07), a regra vale para cada grupo de alunos: o P1 e
+    // o P2 têm cada um as suas sessões — dividir a turma em turnos
+    // práticos é precisamente dar a mesma disciplina a cada metade em
+    // separado. Uma sessão da turma inteira conta para todos os subgrupos.
     if (!empty($aula['disciplina_id']) && !empty($aula['horario_id'])) {
-        $sql = "SELECT id, dia_semana FROM aulas
+        $sql = "SELECT id, dia_semana, subgrupo FROM aulas
                 WHERE horario_id = ? AND disciplina_id = ? AND tipo_bloco = 'Aula'";
         $params = [$aula['horario_id'], $aula['disciplina_id']];
         if ($ignorarAulaId) { $sql .= " AND id != ?"; $params[] = $ignorarAulaId; }
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        $existentes = $stmt->fetchAll();
+        $existentes = array_values(array_filter($stmt->fetchAll(),
+            fn($e) => subgruposSobrepoem($e['subgrupo'], $aula['subgrupo'] ?? null)));
 
         $stmt2 = $pdo->prepare("SELECT nome, carga_horaria FROM disciplinas WHERE id = ?");
         $stmt2->execute([$aula['disciplina_id']]);
@@ -101,8 +129,10 @@ function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): 
             $problemas[] = ['tipo' => 'Carga', 'bloqueante' => true, 'outra_aula_id' => (int)$diaAdjacente['id'],
                 'mensagem' => "\"$nomeDisc\" já está marcada em {$diaAdjacente['dia_semana']} — tem de haver pelo menos um dia de intervalo entre as duas sessões (não pode ser em dias consecutivos)."];
         } elseif (count($existentes) >= $limite) {
+            $subCand = normalizarSubgrupo($aula['subgrupo'] ?? null);
             $problemas[] = ['tipo' => 'Carga', 'bloqueante' => true, 'outra_aula_id' => (int)$existentes[0]['id'],
-                'mensagem' => "\"$nomeDisc\" já está marcada $limite vez(es) esta semana nesta turma (limite atingido)."];
+                'mensagem' => "\"$nomeDisc\" já está marcada $limite vez(es) esta semana nesta turma"
+                            . ($subCand ? " para o subgrupo $subCand" : '') . " (limite atingido)."];
         }
     }
 
@@ -166,12 +196,24 @@ function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): 
                 'mensagem' => "A sala \"" . ($outra['sala_nome'] ?? '—') . "\" já está ocupada nesta mesma $quandoCand por $onde"
                             . ($docenteOutra ? " (docente {$docenteOutra})" : '') . "."];
         }
-        // RN03 — Conflito de Turma (mesmo horário e mesmo subgrupo — RN07)
-        $mesmoSub = ($outra['subgrupo'] ?? null) === ($aula['subgrupo'] ?? null);
-        if ($outra['horario_id'] == $aula['horario_id'] && $mesmoSub) {
-            $subTxt = $aula['subgrupo'] ? " (subgrupo {$aula['subgrupo']})" : '';
+        // RN03 — Conflito de Turma: os mesmos alunos em duas aulas ao mesmo
+        // tempo. Com RN07, só não colidem aulas de subgrupos DIFERENTES — uma
+        // aula da turma inteira colide com a de qualquer subgrupo.
+        if ($outra['horario_id'] == $aula['horario_id']
+            && subgruposSobrepoem($outra['subgrupo'] ?? null, $aula['subgrupo'] ?? null)) {
+            $subCand  = normalizarSubgrupo($aula['subgrupo'] ?? null);
+            $subOutra = normalizarSubgrupo($outra['subgrupo'] ?? null);
+            if ($subCand && $subOutra) {
+                $quem = "O subgrupo $subCand já tem";
+            } elseif ($subOutra) {
+                $quem = "O subgrupo $subOutra desta turma já tem";
+            } elseif ($subCand) {
+                $quem = "A turma inteira (e portanto também o subgrupo $subCand) já tem";
+            } else {
+                $quem = "Esta turma já tem";
+            }
             $problemas[] = ['tipo' => 'Turma', 'bloqueante' => true, 'outra_aula_id' => (int)$outra['id'],
-                'mensagem' => "Esta turma$subTxt já tem \"" . ($outra['disciplina_nome'] ?? 'uma aula')
+                'mensagem' => "$quem \"" . ($outra['disciplina_nome'] ?? 'uma aula')
                             . "\" marcada nesta mesma $quandoCand" . ($outra['sala_nome'] ? " (sala {$outra['sala_nome']})" : '') . "."];
         }
     }
@@ -220,24 +262,49 @@ function revalidarHorario(PDO $pdo, int $horarioId): int {
          WHERE a.horario_id = ?");
     $stmt->execute([$horarioId]);
 
-    $encontrados = [];
-    $ins = $pdo->prepare("INSERT INTO conflitos (aula_id_1, aula_id_2, tipo, mensagem) VALUES (?,?,?,?)");
+    // 1) Tudo o que é detetado agora: chave "aula|outra|tipo" → mensagem.
+    $detetados = [];
     foreach ($stmt->fetchAll() as $aula) {
         foreach (verificarConflitos($pdo, $aula, (int)$aula['id']) as $p) {
             if ($p['bloqueante'] && $p['outra_aula_id']) {
-                $chave = $aula['id'] . '|' . $p['outra_aula_id'] . '|' . $p['tipo'];
-                $encontrados[$chave] = true;
-                if (!isset($existentes[$chave])) {
-                    $ins->execute([(int)$aula['id'], $p['outra_aula_id'], $p['tipo'], mb_substr($p['mensagem'], 0, 500)]);
-                }
+                $detetados[$aula['id'] . '|' . $p['outra_aula_id'] . '|' . $p['tipo']] = $p['mensagem'];
             }
         }
     }
 
+    // 2) Quando as duas aulas são deste horário, o mesmo problema é visto
+    //    dos dois lados (A colide com B e B colide com A) — sem isto, um
+    //    único conflito aparecia duas vezes na página e contava 2 para a
+    //    RN15. Fica só o lado com o id menor; os conflitos com aulas de
+    //    outros horários (outros cursos) continuam um por aula daqui.
+    $encontrados = [];
+    foreach ($detetados as $chave => $mensagem) {
+        [$a, $b, $tipo] = explode('|', $chave);
+        if ((int)$b < (int)$a && isset($detetados["$b|$a|$tipo"])) { continue; }
+        $encontrados[$chave] = $mensagem;
+    }
+
+    $ins = $pdo->prepare("INSERT INTO conflitos (aula_id_1, aula_id_2, tipo, mensagem) VALUES (?,?,?,?)");
+    foreach ($encontrados as $chave => $mensagem) {
+        if (!isset($existentes[$chave])) {
+            [$a, $b, $tipo] = explode('|', $chave);
+            $ins->execute([(int)$a, (int)$b, $tipo, mb_substr($mensagem, 0, 500)]);
+        }
+    }
+
+    // 3) O que estava pendente e já não é detetado passa a Resolvido. Um
+    //    registo que é só o "outro lado" de um conflito que continua (ver 2,
+    //    p.ex. gravado por versões anteriores) é apagado, não "resolvido" —
+    //    senão aparecia em "Resolvidos" um problema que ainda existe.
     $resolvidos = array_diff_key($existentes, $encontrados);
     if ($resolvidos) {
         $upd = $pdo->prepare("UPDATE conflitos SET estado='Resolvido' WHERE id=?");
-        foreach ($resolvidos as $id) { $upd->execute([$id]); }
+        $del = $pdo->prepare("DELETE FROM conflitos WHERE id=?");
+        foreach ($resolvidos as $chave => $id) {
+            [$a, $b, $tipo] = explode('|', $chave);
+            if (isset($encontrados["$b|$a|$tipo"])) { $del->execute([$id]); }
+            else { $upd->execute([$id]); }
+        }
     }
 
     return count($encontrados);

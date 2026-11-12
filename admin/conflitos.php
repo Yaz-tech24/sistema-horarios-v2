@@ -30,6 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ($f = lerFlash()) { ${$f['tipo']} = $f['texto']; }
 
+// Os coordenadores de cada curso vêm de uma subconsulta, não de JOIN +
+// GROUP BY: a versão com GROUP BY dependia de o MySQL aceitar colunas fora
+// do GROUP BY, o que muda com o sql_mode ONLY_FULL_GROUP_BY (ligado por
+// omissão no MySQL 8 do docker-compose.yml).
 $conflitos = $pdo->query(
     "SELECT co.id, co.tipo, co.mensagem, co.detetado_em,
             a1.dia_semana, a1.hora_inicio, a1.hora_fim,
@@ -37,7 +41,9 @@ $conflitos = $pdo->query(
             c.sigla AS curso_sigla, c.nome AS curso_nome, c.id AS curso_id,
             t.ano_curricular, t.nome_turma, t.regime,
             h.id AS horario_id, h.estado AS horario_estado,
-            GROUP_CONCAT(DISTINCT u.nome ORDER BY u.nome SEPARATOR ', ') AS coordenadores
+            (SELECT GROUP_CONCAT(DISTINCT u.nome ORDER BY u.nome SEPARATOR ', ')
+               FROM coordenador_curso cc JOIN utilizadores u ON u.id = cc.utilizador_id AND u.ativo = 1
+              WHERE cc.curso_id = c.id) AS coordenadores
      FROM conflitos co
      JOIN aulas a1 ON co.aula_id_1 = a1.id
      JOIN aulas a2 ON co.aula_id_2 = a2.id
@@ -46,10 +52,7 @@ $conflitos = $pdo->query(
      JOIN cursos c ON t.curso_id = c.id
      LEFT JOIN disciplinas d1 ON a1.disciplina_id = d1.id
      LEFT JOIN disciplinas d2 ON a2.disciplina_id = d2.id
-     LEFT JOIN coordenador_curso cc ON cc.curso_id = c.id
-     LEFT JOIN utilizadores u ON u.id = cc.utilizador_id AND u.ativo = 1
      WHERE co.estado = 'Pendente'
-     GROUP BY co.id
      ORDER BY c.sigla, t.ano_curricular,
               FIELD(a1.dia_semana,'Segunda','Terca','Quarta','Quinta','Sexta'), a1.hora_inicio")
     ->fetchAll();

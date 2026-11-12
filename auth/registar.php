@@ -7,7 +7,18 @@ if (utilizadorAutenticado()) {
     exit;
 }
 
-const REGISTO_MIN_PASSWORD = 6;
+// PERMITIR_REGISTO=0 no .env fecha o registo por completo (a página deixa
+// de existir, não fica só sem link) — para quando todas as contas já estão
+// criadas e só o Administrador deve poder criar mais.
+if (getenv('PERMITIR_REGISTO') === '0') {
+    header('Location: ' . BASE_URL . '/auth/login.php');
+    exit;
+}
+
+// Registos por IP em cada janela — esta página é pública, e sem limite
+// dava para "ocupar" os nomes de todos os docentes com contas falsas (ficam
+// inativas, mas tiram o nome da lista a quem é o verdadeiro dono).
+const REGISTO_MAX_POR_IP = 5;
 
 $erro = $ok = null;
 
@@ -21,13 +32,14 @@ function docentesPorRegistar(PDO $pdo): array {
 }
 $docentes = docentesPorRegistar($pdo);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    validarCSRF();
+$docenteIdEscolhido = 0;
+$email = '';
 
-    $docenteId = (int)($_POST['docente_id'] ?? 0);
-    $email     = trim($_POST['email'] ?? '');
-    $senha     = $_POST['senha'] ?? '';
-    $confirma  = $_POST['senha_confirma'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $docenteIdEscolhido = $docenteId = (int)postTexto('docente_id', 12);
+    $email     = postTexto('email', 150);
+    $senha     = postSenha('senha');
+    $confirma  = postSenha('senha_confirma');
 
     $stmt = $pdo->prepare("SELECT id, nome FROM docentes WHERE id = ? AND utilizador_id IS NULL");
     $stmt->execute([$docenteId]);
@@ -37,14 +49,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$email]);
     $emailEmUso = (bool)$stmt->fetch();
 
-    if (!$docente) {
+    if (!csrfValido()) {
+        $erro = "Esta página esteve aberta demasiado tempo. Preenche novamente e volta a enviar.";
+    } elseif (acoesRecentesDoIp($pdo, ['registo_conta'], 60) >= REGISTO_MAX_POR_IP) {
+        $erro = "Demasiados registos a partir desta rede. Tenta mais tarde, ou pede a conta ao Administrador.";
+    } elseif (!$docente) {
         $erro = "Escolhe o teu nome na lista — ou já tens conta, ou a lista mudou entretanto. Atualiza a página.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $erro = "Este e-mail não parece válido.";
     } elseif ($emailEmUso) {
         $erro = "Já existe uma conta com este e-mail.";
-    } elseif (strlen($senha) < REGISTO_MIN_PASSWORD) {
-        $erro = "A palavra-passe tem de ter pelo menos " . REGISTO_MIN_PASSWORD . " caracteres.";
+    } elseif ($erroSenha = validarPalavraPasse($senha, $email)) {
+        $erro = $erroSenha;
     } elseif ($senha !== $confirma) {
         $erro = "A confirmação não coincide com a palavra-passe.";
     } else {
@@ -64,10 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('docente já foi ligado a outra conta');
             }
             $pdo->commit();
+            registarAuditoria($pdo, 'registo_conta', $docente['nome'] . ' <' . $email . '>', $novoId);
             $ok = "Conta criada para " . $docente['nome'] . ". Um Administrador tem de a ativar antes de conseguires entrar.";
             $docentes = docentesPorRegistar($pdo);
         } catch (Throwable $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
             error_log('Erro ao registar docente: ' . $e->getMessage());
             $erro = "Não foi possível criar a conta — pode já ter sido registada por outra pessoa. Atualiza a página e confirma.";
             $docentes = docentesPorRegistar($pdo);
@@ -126,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <select class="form-control" id="docente_id" name="docente_id" required autofocus>
                         <option value="">— escolher —</option>
                         <?php foreach ($docentes as $d): ?>
-                        <option value="<?= $d['id'] ?>" <?= (($_POST['docente_id'] ?? '') == $d['id']) ? 'selected' : '' ?>>
+                        <option value="<?= (int)$d['id'] ?>" <?= ($docenteIdEscolhido === (int)$d['id']) ? 'selected' : '' ?>>
                             <?= htmlspecialchars($d['nome']) ?><?= $d['categoria'] ? ' (' . htmlspecialchars($d['categoria']) . ')' : '' ?>
                         </option>
                         <?php endforeach; ?>
@@ -137,16 +154,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="input-with-icon">
                         <?= icone('mail') ?>
                         <input class="form-control" type="email" id="email" name="email"
-                               placeholder="nome@fagrenm.ucm.ac.mz"
-                               value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
+                               placeholder="nome@fagrenm.ucm.ac.mz" maxlength="150" autocomplete="username"
+                               value="<?= htmlspecialchars($email) ?>" required>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="senha">Palavra-passe</label>
+                    <label for="senha">Palavra-passe (mínimo <?= SENHA_MIN ?> caracteres)</label>
                     <div class="input-with-icon">
                         <?= icone('lock') ?>
                         <input class="form-control" type="password" id="senha" name="senha"
-                               minlength="<?= REGISTO_MIN_PASSWORD ?>" placeholder="••••••••" required>
+                               minlength="<?= SENHA_MIN ?>" maxlength="<?= SENHA_MAX_BYTES ?>" placeholder="••••••••"
+                               autocomplete="new-password" required>
                     </div>
                 </div>
                 <div class="form-group">
@@ -154,7 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="input-with-icon">
                         <?= icone('lock') ?>
                         <input class="form-control" type="password" id="senha_confirma" name="senha_confirma"
-                               minlength="<?= REGISTO_MIN_PASSWORD ?>" placeholder="••••••••" required>
+                               minlength="<?= SENHA_MIN ?>" maxlength="<?= SENHA_MAX_BYTES ?>" placeholder="••••••••"
+                               autocomplete="new-password" required>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary login-submit">Criar conta <?= icone('chevron', 17) ?></button>

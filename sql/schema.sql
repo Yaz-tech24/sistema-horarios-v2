@@ -26,10 +26,47 @@ CREATE TABLE utilizadores (
   password_hash VARCHAR(255) NOT NULL,
   perfil ENUM('Administrador','Coordenador','Docente') NOT NULL,
   ativo TINYINT(1) DEFAULT 1,
+  -- 1 = a palavra-passe atual é provisória (conta de origem, ou definida
+  -- pelo Administrador) e tem de ser trocada no próximo acesso — até lá a
+  -- pessoa só chega a "A minha conta" (ver exigirLogin() em includes/auth.php).
+  deve_mudar_senha TINYINT(1) NOT NULL DEFAULT 0,
   -- Bloqueio temporário por força bruta no login (ver auth/login.php).
   tentativas_falhadas TINYINT UNSIGNED NOT NULL DEFAULT 0,
   bloqueado_ate DATETIME NULL,
+  -- Última entrada com sucesso. NULL numa conta inativa = registo novo à
+  -- espera de ativação (ver contasPorAtivar() em includes/seguranca.php).
+  ultimo_login DATETIME NULL,
   criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Registo de auditoria: entradas e saídas, logins falhados, alterações de
+-- contas e de palavras-passe, publicações. Consultado em Admin → Registo
+-- de atividade; é também daqui que sai a limitação de tentativas por IP.
+-- utilizador_id é NULL quando não há conta associada (ex.: tentativa de
+-- login com um e-mail que não existe — o e-mail tentado fica em detalhe).
+CREATE TABLE registo_auditoria (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  utilizador_id INT NULL,
+  acao VARCHAR(40) NOT NULL,
+  detalhe VARCHAR(255) NULL,
+  ip VARCHAR(45) NULL,
+  criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE SET NULL,
+  INDEX idx_auditoria_ip (acao, ip, criado_em),
+  INDEX idx_auditoria_data (criado_em)
+);
+
+-- Links de "Esqueci-me da palavra-passe" (auth/recuperar.php). Guarda-se
+-- só o SHA-256 do token — o token em claro existe apenas no e-mail enviado.
+CREATE TABLE recuperacoes_senha (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  utilizador_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expira_em DATETIME NOT NULL,
+  usado_em DATETIME NULL,
+  criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_recuperacao_token (token_hash)
 );
 
 -- Docentes (podem ou nao ter conta de utilizador)

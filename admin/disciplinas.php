@@ -8,7 +8,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validarCSRF();
 
     if (isset($_POST['eliminar'])) {
-        $elimId = (int)$_POST['eliminar'];
+        $elimId = (int)postTexto('eliminar', 12);
+        // Em transação: se a disciplina não puder ser eliminada (tem aulas),
+        // a lista "pode lecionar" volta a ficar como estava.
+        $pdo->beginTransaction();
         try {
             // "Pode lecionar" é só uma lista de aptidão (admin/docentes.php),
             // não um registo de horário — limpar aqui não perde nada real e
@@ -16,8 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // erro abaixo fica assim exata: só dispara por aulas de verdade).
             $pdo->prepare("DELETE FROM docente_disciplina WHERE disciplina_id = ?")->execute([$elimId]);
             $pdo->prepare("DELETE FROM disciplinas WHERE id = ?")->execute([$elimId]);
+            $pdo->commit();
             $sucesso = true; $mensagem = 'Disciplina eliminada.';
         } catch (PDOException $e) {
+            $pdo->rollBack();
             $sucesso = false; $mensagem = 'Não é possível eliminar: esta disciplina já tem aulas marcadas em algum horário.';
         }
         if (ehPedidoAjax()) { responderAjax($sucesso, $mensagem); }
@@ -25,23 +30,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: disciplinas.php'); exit;
     }
 
-    $curso_id = (int)($_POST['curso_id'] ?? 0);
-    $codigo   = trim($_POST['codigo'] ?? '');
-    $nome     = trim($_POST['nome'] ?? '');
-    $ano      = (int)($_POST['ano_curricular'] ?? 0);
+    $curso_id = (int)postTexto('curso_id', 12);
+    $codigo   = postTexto('codigo', 20);
+    $nome     = postTexto('nome', 150);
+    $ano      = (int)postTexto('ano_curricular', 3);
     // RN09 — carga_horaria representa sempre "vezes por semana", 1 ou 2.
     // Nunca confiar no que vier do POST: fixa-se sempre ao intervalo válido.
-    $carga    = max(1, min(2, (int)($_POST['carga_horaria'] ?? 2)));
-    $tipo     = $_POST['tipo_aula'] ?? 'Teorica';
+    $carga    = max(1, min(2, (int)postTexto('carga_horaria', 3)));
+    $tipo     = in_array($_POST['tipo_aula'] ?? '', ['Teorica','Pratica','Laboratorial'], true)
+        ? $_POST['tipo_aula'] : 'Teorica';
     // Laboratório só se aplica a disciplinas não-teóricas — nunca confiar
     // no que vier do POST se o tipo escolhido for Teórica.
-    $salaId   = $tipo !== 'Teorica' ? ((int)($_POST['sala_id'] ?? 0) ?: null) : null;
-    $regenteId    = (int)($_POST['docente_regente_id'] ?? 0) ?: null;
-    $assistenteId = (int)($_POST['docente_assistente_id'] ?? 0) ?: null;
-    $id       = (int)($_POST['id'] ?? 0);
+    $salaId   = $tipo !== 'Teorica' ? ((int)postTexto('sala_id', 12) ?: null) : null;
+    $regenteId    = (int)postTexto('docente_regente_id', 12) ?: null;
+    $assistenteId = (int)postTexto('docente_assistente_id', 12) ?: null;
+    $id       = (int)postTexto('id', 12);
+
+    // Uma disciplina com aulas marcadas pertence ao horário de uma turma
+    // desse curso e ano — mudá-la de curso ou de ano deixava essas aulas
+    // num horário onde a disciplina já não pode estar (o Editor deixava de
+    // a mostrar na lista, a geração automática ignorava-a).
+    $aulasAtivas = 0;
+    if ($id > 0) {
+        $stmt = $pdo->prepare("SELECT curso_id, ano_curricular FROM disciplinas WHERE id = ?");
+        $stmt->execute([$id]);
+        $antiga = $stmt->fetch();
+        if ($antiga && ((int)$antiga['curso_id'] !== $curso_id || (int)$antiga['ano_curricular'] !== $ano)) {
+            $stmt = $pdo->prepare(
+                "SELECT COUNT(*) FROM aulas a JOIN horarios h ON h.id = a.horario_id
+                 WHERE a.disciplina_id = ? AND a.tipo_bloco = 'Aula' AND h.estado != 'Arquivado'");
+            $stmt->execute([$id]);
+            $aulasAtivas = (int)$stmt->fetchColumn();
+        }
+    }
 
     if ($curso_id <= 0 || $nome === '' || $ano < 1 || $ano > 5) {
         $erro = "Preenche o curso, o nome e um ano válido (1-5).";
+    } elseif ($aulasAtivas > 0) {
+        $erro = "Não é possível mudar o curso ou o ano desta disciplina: tem $aulasAtivas aula(s) marcada(s) em horários ativos. "
+              . "Remove-as primeiro no Editor de Horário (ou arquiva esses horários).";
     } elseif (!$regenteId) {
         // Regente é obrigatório na validação da aplicação, mesmo que a
         // coluna aceite NULL na BD (disciplinas antigas antes de editadas).
@@ -49,20 +76,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($assistenteId && $assistenteId === $regenteId) {
         $erro = "O assistente tem de ser um docente diferente do regente.";
     } else {
-        if ($id > 0) {
-            $stmt = $pdo->prepare(
-                "UPDATE disciplinas SET curso_id=?, codigo=?, nome=?, ano_curricular=?, carga_horaria=?,
-                    tipo_aula=?, sala_id=?, docente_regente_id=?, docente_assistente_id=? WHERE id=?");
-            $stmt->execute([$curso_id, $codigo, $nome, $ano, $carga, $tipo, $salaId, $regenteId, $assistenteId, $id]);
-            definirFlash('ok', 'Disciplina atualizada.');
-        } else {
-            $stmt = $pdo->prepare(
-                "INSERT INTO disciplinas (curso_id, codigo, nome, ano_curricular, carga_horaria, tipo_aula,
-                    sala_id, docente_regente_id, docente_assistente_id) VALUES (?,?,?,?,?,?,?,?,?)");
-            $stmt->execute([$curso_id, $codigo, $nome, $ano, $carga, $tipo, $salaId, $regenteId, $assistenteId]);
-            definirFlash('ok', 'Disciplina criada.');
+        try {
+            if ($id > 0) {
+                $stmt = $pdo->prepare(
+                    "UPDATE disciplinas SET curso_id=?, codigo=?, nome=?, ano_curricular=?, carga_horaria=?,
+                        tipo_aula=?, sala_id=?, docente_regente_id=?, docente_assistente_id=? WHERE id=?");
+                $stmt->execute([$curso_id, $codigo, $nome, $ano, $carga, $tipo, $salaId, $regenteId, $assistenteId, $id]);
+                definirFlash('ok', 'Disciplina atualizada.');
+            } else {
+                $stmt = $pdo->prepare(
+                    "INSERT INTO disciplinas (curso_id, codigo, nome, ano_curricular, carga_horaria, tipo_aula,
+                        sala_id, docente_regente_id, docente_assistente_id) VALUES (?,?,?,?,?,?,?,?,?)");
+                $stmt->execute([$curso_id, $codigo, $nome, $ano, $carga, $tipo, $salaId, $regenteId, $assistenteId]);
+                definirFlash('ok', 'Disciplina criada.');
+            }
+            header('Location: disciplinas.php'); exit;
+        } catch (PDOException $e) {
+            // Curso, docente ou sala que já não existem (eliminados noutro
+            // separador, ou id alterado no pedido) — a chave estrangeira recusa.
+            error_log('Erro ao guardar disciplina: ' . $e->getMessage());
+            $erro = "Não foi possível guardar: o curso, o docente ou o laboratório escolhido já não existe. Atualiza a página.";
         }
-        header('Location: disciplinas.php'); exit;
     }
 }
 
@@ -204,7 +238,7 @@ require_once __DIR__ . '/../includes/header.php';
 </section>
 <?php endif; ?>
 
-<script>
+<script nonce="<?= nonceCSP() ?>">
 (function () {
     var selTipo = document.getElementById('disc-tipo-aula');
     var campoLab = document.getElementById('disc-campo-lab');

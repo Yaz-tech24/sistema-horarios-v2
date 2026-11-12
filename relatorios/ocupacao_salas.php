@@ -7,8 +7,12 @@ require_once __DIR__ . '/../includes/funcoes_coordenador.php'; // DIAS_SEMANA, B
 // se os dias letivos ou os blocos horários por dia mudarem no futuro.
 $TOTAL_BLOCOS = count(DIAS_SEMANA) * count(BLOCOS_HORARIOS);
 
+// COUNT(h.id) e não COUNT(a.id): o filtro de "não arquivado" está no LEFT
+// JOIN, por isso as aulas de horários arquivados continuam na linha com
+// h.id a NULL — contar a.id incluía-as e inflacionava a ocupação (ver a
+// mesma nota em relatorios/carga_docente.php).
 $ocupacao = $pdo->query(
-    "SELECT s.nome, s.capacidade, COUNT(a.id) AS blocos
+    "SELECT s.nome, s.capacidade, COUNT(h.id) AS blocos
      FROM salas s
      LEFT JOIN aulas a ON a.sala_id = s.id AND a.tipo_bloco = 'Aula'
      LEFT JOIN horarios h ON a.horario_id = h.id AND h.estado != 'Arquivado'

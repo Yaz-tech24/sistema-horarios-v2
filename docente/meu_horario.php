@@ -14,11 +14,17 @@ $docente = $stmt->fetch();
 // A referência em texto é construída aqui a partir da aula — nunca vem do
 // formulário — e fica guardada para o pedido continuar legível mesmo que a
 // aula seja removida mais tarde.
+// Pedidos por docente em cada 24 horas — chega e sobra para uso normal, e
+// impede encher a caixa do coordenador com centenas de pedidos repetidos.
+const PEDIDOS_MAX_POR_DIA = 10;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $docente) {
     validarCSRF();
-    $aulaId = (int)($_POST['aula_id'] ?? 0);
-    $mensagem = trim($_POST['mensagem'] ?? '');
+    $aulaId = (int)postTexto('aula_id', 12);
+    $mensagem = postTexto('mensagem', 500);
 
+    // Só aulas de horários Publicados — as mesmas que a página mostra. Sem
+    // o filtro de estado, um id de uma aula ainda em rascunho era aceite.
     $stmt = $pdo->prepare(
         "SELECT a.id, a.horario_id, a.dia_semana, LEFT(a.hora_inicio,5) AS hi, LEFT(a.hora_fim,5) AS hf,
                 d.nome AS disciplina, c.sigla AS curso, t.ano_curricular
@@ -27,12 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $docente) {
          JOIN turmas t ON h.turma_id = t.id
          JOIN cursos c ON t.curso_id = c.id
          LEFT JOIN disciplinas d ON a.disciplina_id = d.id
-         WHERE a.id = ? AND (a.docente_id = ? OR a.docente_regente_id = ? OR a.docente_assistente_id = ?)");
+         WHERE a.id = ? AND h.estado = 'Publicado'
+           AND (a.docente_id = ? OR a.docente_regente_id = ? OR a.docente_assistente_id = ?)");
     $stmt->execute([$aulaId, $docente['id'], $docente['id'], $docente['id']]);
     $aulaPedido = $stmt->fetch();
 
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM pedidos WHERE utilizador_id = ? AND criado_em > DATE_SUB(NOW(), INTERVAL 1 DAY)");
+    $stmt->execute([$_SESSION['utilizador_id']]);
+    $pedidosHoje = (int)$stmt->fetchColumn();
+
     if (!$aulaPedido) {
         definirFlash('erro', 'Essa aula não é tua.');
+    } elseif ($pedidosHoje >= PEDIDOS_MAX_POR_DIA) {
+        definirFlash('erro', 'Já enviaste ' . PEDIDOS_MAX_POR_DIA . ' pedidos nas últimas 24 horas. Fala diretamente com o coordenador, ou tenta amanhã.');
     } elseif (mb_strlen($mensagem) < 10) {
         definirFlash('erro', 'Explica o problema em pelo menos 10 caracteres, para o coordenador perceber.');
     } else {
@@ -72,7 +86,7 @@ if ($docente) {
          LEFT JOIN docentes dr ON a.docente_regente_id = dr.id
          LEFT JOIN docentes da ON a.docente_assistente_id = da.id
          WHERE (a.docente_id = ? OR a.docente_regente_id = ? OR a.docente_assistente_id = ?)
-           AND h.estado = 'Publicado'
+           AND h.estado = 'Publicado' AND a.tipo_bloco = 'Aula'
          ORDER BY FIELD(a.dia_semana, $dias), a.hora_inicio");
     $stmt->execute([$docente['id'], $docente['id'], $docente['id'], $docente['id']]);
     $aulas = $stmt->fetchAll();
@@ -96,7 +110,7 @@ if ($docente) {
 
 $pageTitle = 'Meu horário';
 $pageDescription = 'Todas as tuas aulas publicadas, em todos os cursos onde lecionas.' . ($aulas ? ' Carga semanal: ' . number_format($horas, 1) . ' horas.' : '');
-$pageActions = $aulas ? '<button class="btn btn-secondary" type="button" onclick="window.print()">' . icone('printer', 17) . ' Imprimir horário</button>' : '';
+$pageActions = $aulas ? '<button class="btn btn-secondary" type="button" data-imprimir>' . icone('printer', 17) . ' Imprimir horário</button>' : '';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -113,7 +127,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="grid stats-grid" style="margin-bottom:20px">
     <article class="stat-card"><div class="stat-card-top"><span class="stat-icon"><?= icone('calendar') ?></span></div><div class="stat-value"><?= count($aulas) ?></div><div class="stat-label">Aulas por semana</div></article>
     <article class="stat-card accent-teal"><div class="stat-card-top"><span class="stat-icon"><?= icone('book') ?></span></div><div class="stat-value"><?= count(array_unique(array_column($aulas, 'disciplina_id'))) ?></div><div class="stat-label">Disciplinas</div></article>
-    <article class="stat-card accent-purple"><div class="stat-card-top"><span class="stat-icon"><?= icone('users') ?></span></div><div class="stat-value"><?= count(array_unique(array_map(fn($a) => $a['curso'] . $a['ano_curricular'] . $a['regime'], $aulas))) ?></div><div class="stat-label">Turmas</div></article>
+    <article class="stat-card accent-purple"><div class="stat-card-top"><span class="stat-icon"><?= icone('users') ?></span></div><div class="stat-value"><?= count(array_unique(array_column($aulas, 'horario_id'))) /* um horário publicado por turma — duas turmas (A e B) do mesmo curso/ano contam como duas */ ?></div><div class="stat-label">Turmas</div></article>
     <article class="stat-card accent-orange"><div class="stat-card-top"><span class="stat-icon"><?= icone('clock') ?></span></div><div class="stat-value"><?= number_format($horas, 1) ?></div><div class="stat-label">Horas semanais</div></article>
 </div>
 

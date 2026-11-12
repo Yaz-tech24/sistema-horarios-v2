@@ -118,4 +118,72 @@ CREATE TABLE IF NOT EXISTS pedidos (
   INDEX idx_pedidos_estado (estado)
 );
 
-SELECT 'Base de dados da VPS atualizada.' AS resultado;
+-- 9) Reforço de segurança (igual a sql/migracao_seguranca_v2.sql)
+-- 9a) Mudança obrigatória de palavra-passe no primeiro acesso
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'utilizadores' AND COLUMN_NAME = 'deve_mudar_senha');
+SET @sql := IF(@c = 0,
+  'ALTER TABLE utilizadores ADD COLUMN deve_mudar_senha TINYINT(1) NOT NULL DEFAULT 0 AFTER ativo',
+  'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 9b) Data da última entrada
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'utilizadores' AND COLUMN_NAME = 'ultimo_login');
+SET @sql := IF(@c = 0,
+  'ALTER TABLE utilizadores ADD COLUMN ultimo_login DATETIME NULL AFTER bloqueado_ate',
+  'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 9c) Registo de auditoria (Admin → Registo de atividade; limitação por IP)
+CREATE TABLE IF NOT EXISTS registo_auditoria (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  utilizador_id INT NULL,
+  acao VARCHAR(40) NOT NULL,
+  detalhe VARCHAR(255) NULL,
+  ip VARCHAR(45) NULL,
+  criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE SET NULL,
+  INDEX idx_auditoria_ip (acao, ip, criado_em),
+  INDEX idx_auditoria_data (criado_em)
+);
+
+-- 9d) Links de recuperação de palavra-passe
+CREATE TABLE IF NOT EXISTS recuperacoes_senha (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  utilizador_id INT NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expira_em DATETIME NOT NULL,
+  usado_em DATETIME NULL,
+  criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_recuperacao_token (token_hash)
+);
+
+-- 9e) Contas que ainda têm a palavra-passe pública de origem (admin123,
+-- coord123, docente123 — os hashes de seed.sql/seed2_contas_teste.sql)
+-- passam a ter de a mudar no próximo acesso. Quem já a mudou não é afetado.
+UPDATE utilizadores SET deve_mudar_senha = 1
+WHERE password_hash IN (
+  '$2y$10$dDk7H9KgE022NjXFiEU2Iu7p1ZNdCC5RVZyonuYQxskOgkOLB3r8e',
+  '$2y$10$b4IY6hRLpS3/ikzQn3MQwOrTTtPx48NmYUkKaV1xRkYJQpg.9d4me',
+  '$2y$10$WvLozLb0aNogxEJifZeM..a7hJPWPvtSCbO/tdHQiOChj6Iz3RiGC'
+);
+
+-- 10) Limpeza dos blocos (igual a sql/migracao_limpeza_blocos.sql)
+-- 10a) Estudo Autónomo / Atividade Não Letiva sem disciplina, docente nem
+--      sala "fantasma" (gravados por versões anteriores do editor)
+UPDATE aulas
+SET disciplina_id = NULL, docente_id = NULL, docente_regente_id = NULL,
+    docente_assistente_id = NULL, sala_id = NULL, subgrupo = NULL
+WHERE tipo_bloco <> 'Aula'
+  AND (disciplina_id IS NOT NULL OR docente_id IS NOT NULL OR docente_regente_id IS NOT NULL
+       OR docente_assistente_id IS NOT NULL OR sala_id IS NOT NULL OR subgrupo IS NOT NULL);
+
+-- 10b) Subgrupos no formato atual ("p1 " -> "P1")
+UPDATE aulas
+SET subgrupo = NULLIF(UPPER(TRIM(subgrupo)), '')
+WHERE subgrupo IS NOT NULL
+  AND (TRIM(subgrupo) = '' OR CAST(subgrupo AS BINARY) <> CAST(UPPER(TRIM(subgrupo)) AS BINARY));
+
+SELECT 'Base de dados da VPS atualizada. Depois: Admin -> Conflitos -> Revalidar todos os horarios.' AS resultado;

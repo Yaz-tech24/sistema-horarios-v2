@@ -56,6 +56,10 @@ a { color: inherit; text-decoration: none; }
 .nav-item em { margin-left: auto; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; color: #fff; background: var(--orange); border-radius: 50%; font-size: .67rem; font-style: normal; }
 .sidebar-footer { margin-top: auto; padding: 11px 12px 17px; border-top: 1px solid rgba(255,255,255,.16); }
 .logout-link:hover { color: #fff; background: #6e2323; }
+/* "Terminar sessão" é um <button> dentro de um <form method="post"> (com
+   token CSRF) — estas regras só lhe tiram o aspeto de botão do browser,
+   para ficar igual aos restantes itens do menu. */
+button.nav-item { width: 100%; border: 0; background: none; font: inherit; font-size: .84rem; text-align: left; cursor: pointer; }
 .sidebar-overlay { display: none; }
 
 .main-area { min-height: 100vh; margin-left: var(--sidebar); display: flex; flex-direction: column; }

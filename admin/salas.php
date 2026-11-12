@@ -9,23 +9,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['eliminar'])) {
         try {
-            $pdo->prepare("DELETE FROM salas WHERE id = ?")->execute([(int)$_POST['eliminar']]);
+            $pdo->prepare("DELETE FROM salas WHERE id = ?")->execute([(int)postTexto('eliminar', 12)]);
             $sucesso = true; $mensagem = 'Sala eliminada.';
         } catch (PDOException $e) {
-            $sucesso = false; $mensagem = 'Não é possível eliminar: esta sala já tem aulas marcadas.';
+            $sucesso = false; $mensagem = 'Não é possível eliminar: esta sala tem aulas marcadas, ou é o laboratório de uma disciplina ou a sala habitual de uma turma.';
         }
         if (ehPedidoAjax()) { responderAjax($sucesso, $mensagem); }
         definirFlash($sucesso ? 'ok' : 'erro', $mensagem);
         header('Location: salas.php'); exit;
     }
 
-    $nome = trim($_POST['nome'] ?? '');
-    $tipo = $_POST['tipo'] ?? 'Normal';
-    $cap  = (int)($_POST['capacidade'] ?? 0);
-    $eq   = trim($_POST['equipamento'] ?? '');
-    $id   = (int)($_POST['id'] ?? 0);
+    $nome = postTexto('nome', 100);
+    // O tipo é um ENUM na base de dados — só os três valores que o
+    // formulário oferece; qualquer outra coisa no pedido fica 'Normal'.
+    $tipo = in_array($_POST['tipo'] ?? '', ['Normal','Laboratorio','Auditorio'], true) ? $_POST['tipo'] : 'Normal';
+    $cap  = (int)postTexto('capacidade', 6);
+    $eq   = postTexto('equipamento', 255);
+    $id   = (int)postTexto('id', 12);
 
-    if ($nome === '' || $cap <= 0) {
+    if ($nome === '' || $cap <= 0 || $cap > 5000) {
         $erro = "Preenche o nome e uma capacidade válida.";
     } else {
         if ($id > 0) {

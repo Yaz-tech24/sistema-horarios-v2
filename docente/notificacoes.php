@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validarCSRF();
     if (isset($_POST['lida'])) {
         $pdo->prepare("UPDATE notificacoes SET lida=1 WHERE id=? AND utilizador_id=?")
-            ->execute([(int)$_POST['lida'], $_SESSION['utilizador_id']]);
+            ->execute([(int)postTexto('lida', 12), $_SESSION['utilizador_id']]);
     } elseif (isset($_POST['todas'])) {
         $pdo->prepare("UPDATE notificacoes SET lida=1 WHERE utilizador_id=?")
             ->execute([$_SESSION['utilizador_id']]);

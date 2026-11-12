@@ -41,6 +41,17 @@ services:
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
       BASE_URL: ""
+      # O HTTPS termina no Traefik; o contentor só vê HTTP. Com isto a
+      # aplicação confia nos cabeçalhos X-Forwarded-* do proxy — para pôr
+      # a flag Secure no cookie de sessão e para saber o IP real de quem
+      # tenta entrar (sem isto, todos os pedidos pareciam vir do Traefik e
+      # a limitação por IP bloqueava toda a gente de uma vez).
+      PROXY_CONFIAVEL: "1"
+      # Endereço público do site, usado nos links enviados por e-mail
+      # (recuperação de palavra-passe). Ex.: https://horarios.studenthub.tech
+      APP_URL: ${APP_URL:-}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Maputo}
+      PERMITIR_REGISTO: ${PERMITIR_REGISTO:-1}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}
       SMTP_SECURE: ${SMTP_SECURE:-}

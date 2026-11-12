@@ -28,7 +28,7 @@ $stmt = $pdo->query(
      JOIN turmas t ON h.turma_id = t.id
      JOIN cursos c ON t.curso_id = c.id
      LEFT JOIN disciplinas d ON a.disciplina_id = d.id
-     WHERE a.sala_id IS NOT NULL AND h.estado != 'Arquivado'");
+     WHERE a.sala_id IS NOT NULL AND a.tipo_bloco = 'Aula' AND h.estado != 'Arquivado'");
 foreach ($stmt->fetchAll() as $o) {
     $ocupacao[$o['sala_id']][$o['dia_semana'] . '|' . $o['hi'] . '|' . $o['hf']] = $o;
 }
@@ -65,7 +65,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="toolbar">
         <form method="get" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <label for="f-tipo" style="font-size:.79rem;font-weight:600;color:var(--ink-soft)">Tipo de sala</label>
-            <select class="form-control form-select filter-select" name="tipo" id="f-tipo" onchange="this.form.submit()">
+            <select class="form-control form-select filter-select" name="tipo" id="f-tipo" data-auto-submit>
                 <option value="">Todas</option>
                 <?php foreach ($tiposValidos as $t): ?>
                 <option value="<?= $t ?>" <?= $filtroTipo === $t ? 'selected' : '' ?>><?= $t ?></option>

@@ -76,7 +76,9 @@ function nomeTurma(array $t): string {
    ser lida como texto, sem mudar o que se vê na célula. */
 function celulaCsvSegura(?string $valor): string {
     $valor = (string)$valor;
-    return $valor !== '' && strpbrk($valor[0], "=+-@") !== false ? "'" . $valor : $valor;
+    // Tab e CR também: o Excel ignora-os no início da célula e interpreta
+    // o que vem a seguir ("\t=cmd..." era lido como fórmula na mesma).
+    return $valor !== '' && strpbrk($valor[0], "=+-@\t\r") !== false ? "'" . $valor : $valor;
 }
 
 /* Texto de uma aula/bloco para uma célula da grelha CSV — as mesmas 3
@@ -205,18 +207,18 @@ function grelhaImpressao(PDO $pdo, array $t): void {
         <div class="form-row">
             <form method="get" class="campo">
                 <label>Uma turma</label>
-                <select class="form-control form-select" name="turma" onchange="this.form.submit()">
+                <select class="form-control form-select" name="turma" data-auto-submit>
                     <option value="">— escolher —</option>
                     <?php foreach ($turmas as $t): ?>
                     <option value="<?= $t['id'] ?>" <?= ($t['id']==$turmaId)?'selected':'' ?>>
-                        <?= $t['sigla'] ?> · <?= $t['ano_curricular'] ?>º · <?= $t['regime'] ?> · <?= htmlspecialchars($t['nome_turma']) ?>
+                        <?= htmlspecialchars($t['sigla']) ?> · <?= (int)$t['ano_curricular'] ?>º · <?= htmlspecialchars($t['regime']) ?> · <?= htmlspecialchars($t['nome_turma']) ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
             </form>
             <form method="get" class="campo">
                 <label>Ou um curso inteiro (todas as turmas)</label>
-                <select class="form-control form-select" name="curso" onchange="this.form.submit()">
+                <select class="form-control form-select" name="curso" data-auto-submit>
                     <option value="">— escolher —</option>
                     <?php foreach ($cursosDisponiveis as $cid => $rotulo): ?>
                     <option value="<?= $cid ?>" <?= ($cid==$cursoId)?'selected':'' ?>><?= htmlspecialchars($rotulo) ?></option>
@@ -234,7 +236,7 @@ function grelhaImpressao(PDO $pdo, array $t): void {
 
         <?php if ($turmaSel || $turmasDoCursoSel): ?>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
-            <button type="button" class="btn btn-primary" style="width:auto;padding-inline:1.8rem" onclick="window.print()"><?= icone('printer', 17) ?> Imprimir / Exportar PDF</button>
+            <button type="button" class="btn btn-primary" style="width:auto;padding-inline:1.8rem" data-imprimir><?= icone('printer', 17) ?> Imprimir / Exportar PDF</button>
             <a class="btn btn-secondary" style="width:auto;padding-inline:1.8rem"
                href="?<?= $cursoId ? 'curso='.$cursoId : 'turma='.$turmaId ?>&formato=csv"><?= icone('download', 17) ?> Exportar CSV (Excel)</a>
         </div>

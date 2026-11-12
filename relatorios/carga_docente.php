@@ -4,10 +4,16 @@ exigirPerfil(['Administrador','Coordenador']);
 
 // Conta como carga do docente tanto as aulas em que é regente como aquelas
 // em que é assistente — as duas são trabalho real dessa semana.
+// As contagens partem de h.id (o horário NÃO arquivado), não de a.id: o
+// filtro "estado != 'Arquivado'" está no LEFT JOIN, por isso uma aula de um
+// horário arquivado continua na linha, só que com h.id a NULL. Contar a.id
+// somava essas aulas — cada vez que um horário era arquivado e refeito, a
+// carga de todos os docentes dessa turma aparecia a dobrar.
 $carga = $pdo->query(
     "SELECT doc.nome, doc.categoria,
-            COUNT(a.id) AS aulas_semanais,
-            COALESCE(SUM(TIMESTAMPDIFF(MINUTE, a.hora_inicio, a.hora_fim)),0)/60 AS horas,
+            COUNT(h.id) AS aulas_semanais,
+            COALESCE(SUM(CASE WHEN h.id IS NOT NULL
+                              THEN TIMESTAMPDIFF(MINUTE, a.hora_inicio, a.hora_fim) ELSE 0 END),0)/60 AS horas,
             COUNT(DISTINCT t.curso_id) AS n_cursos
      FROM docentes doc
      LEFT JOIN aulas a ON (a.docente_regente_id = doc.id OR a.docente_assistente_id = doc.id) AND a.tipo_bloco = 'Aula'

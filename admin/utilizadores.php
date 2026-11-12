@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validarCSRF();
 
     if (isset($_POST['ativar'])) {
-        $alvoId = (int)$_POST['ativar'];
+        $alvoId = (int)postTexto('ativar', 12);
         $stmt = $pdo->prepare("SELECT perfil, ativo FROM utilizadores WHERE id=?");
         $stmt->execute([$alvoId]);
         $alvo = $stmt->fetch();
@@ -31,8 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sucesso = false;
             $mensagem = 'Não é possível desativar: é o único Administrador ativo.';
         } else {
-            $pdo->prepare("UPDATE utilizadores SET ativo = 1 - ativo WHERE id=?")->execute([$alvoId]);
+            // Valor explícito em vez de "1 - ativo": dois cliques seguidos
+            // (ou dois administradores ao mesmo tempo) acabam sempre no
+            // estado que cada um viu e confirmou, nunca num vaivém.
             $novoAtivo = $alvo['ativo'] ? 0 : 1;
+            $pdo->prepare("UPDATE utilizadores SET ativo = ? WHERE id=?")->execute([$novoAtivo, $alvoId]);
+            // Desativar tem efeito imediato: a sessão dessa pessoa, se
+            // estiver aberta, termina no pedido seguinte que ela fizer
+            // (validarSessaoAtual() em includes/auth.php).
+            registarAuditoria($pdo, $novoAtivo ? 'conta_ativada' : 'conta_desativada', 'conta #' . $alvoId);
             $sucesso = true;
             $mensagem = $novoAtivo ? 'Conta ativada.' : 'Conta desativada.';
         }
@@ -42,13 +49,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: utilizadores.php'); exit;
     }
 
-    $nome   = trim($_POST['nome'] ?? '');
-    $email  = trim($_POST['email'] ?? '');
-    $perfil = $_POST['perfil'] ?? '';
-    $senha  = $_POST['senha'] ?? '';
-    $id     = (int)($_POST['id'] ?? 0);
-    $cursos = array_map('intval', $_POST['cursos'] ?? []);
-    $docente_id = (int)($_POST['docente_id'] ?? 0);
+    $nome   = postTexto('nome', 150);
+    $email  = postTexto('email', 150);
+    $perfil = postTexto('perfil', 20);
+    $senha  = postSenha('senha');
+    $id     = (int)postTexto('id', 12);
+    $cursos = is_array($_POST['cursos'] ?? null) ? array_unique(array_map('intval', $_POST['cursos'])) : [];
+    $docente_id = (int)postTexto('docente_id', 12);
+    $souEu  = $id === (int)$_SESSION['utilizador_id'];
 
     // Impede que uma edição deixe de existir nenhum Administrador ativo
     // (ex.: mudar o próprio perfil, ou o do último Administrador, para outro).
@@ -64,47 +72,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($nome === '' || $email === '' || !in_array($perfil, ['Administrador','Coordenador','Docente'])) {
+    if ($nome === '' || $email === '' || !in_array($perfil, ['Administrador','Coordenador','Docente'], true)) {
         $erro = "Preenche o nome, o e-mail e o perfil.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $erro = "Este e-mail não parece válido.";
-    } elseif (($id === 0 || $senha !== '') && strlen($senha) < 6) {
-        $erro = "A palavra-passe deve ter pelo menos 6 caracteres.";
+    } elseif (($id === 0 || $senha !== '') && ($erroSenha = validarPalavraPasse($senha, $email))) {
+        $erro = $erroSenha;
     } elseif ($perderiaUltimoAdmin) {
         $erro = "Não é possível mudar o perfil: é o único Administrador ativo.";
     } else {
+        // Tudo ou nada: sem transação, um erro a meio (ex.: e-mail repetido
+        // depois de já se terem apagado os cursos do coordenador) deixava a
+        // conta meio gravada.
+        $pdo->beginTransaction();
         try {
+            $criada = $id === 0;
+            $novoHash = $senha !== '' ? password_hash($senha, PASSWORD_DEFAULT) : null;
             if ($id > 0) {
-                if ($senha !== '') {
-                    $stmt = $pdo->prepare("UPDATE utilizadores SET nome=?, email=?, perfil=?, password_hash=? WHERE id=?");
-                    $stmt->execute([$nome, $email, $perfil, password_hash($senha, PASSWORD_DEFAULT), $id]);
+                if ($novoHash !== null) {
+                    // Palavra-passe nova = também desfaz um bloqueio por
+                    // tentativas falhadas que a conta tivesse.
+                    $stmt = $pdo->prepare(
+                        "UPDATE utilizadores SET nome=?, email=?, perfil=?, password_hash=?,
+                            tentativas_falhadas=0, bloqueado_ate=NULL WHERE id=?");
+                    $stmt->execute([$nome, $email, $perfil, $novoHash, $id]);
                 } else {
                     $stmt = $pdo->prepare("UPDATE utilizadores SET nome=?, email=?, perfil=? WHERE id=?");
                     $stmt->execute([$nome, $email, $perfil, $id]);
                 }
+                if ($stmt->rowCount() === 0) {
+                    $existe = $pdo->prepare("SELECT 1 FROM utilizadores WHERE id=?");
+                    $existe->execute([$id]);
+                    if (!$existe->fetch()) { throw new RuntimeException('utilizador inexistente'); }
+                }
             } else {
                 $stmt = $pdo->prepare("INSERT INTO utilizadores (nome, email, password_hash, perfil) VALUES (?,?,?,?)");
-                $stmt->execute([$nome, $email, password_hash($senha, PASSWORD_DEFAULT), $perfil]);
+                $stmt->execute([$nome, $email, $novoHash, $perfil]);
                 $id = (int)$pdo->lastInsertId();
             }
 
             // Coordenador: define QUAIS cursos pode gerir (controlo de acesso por curso)
             $pdo->prepare("DELETE FROM coordenador_curso WHERE utilizador_id=?")->execute([$id]);
             if ($perfil === 'Coordenador') {
-                $ins = $pdo->prepare("INSERT INTO coordenador_curso (utilizador_id, curso_id) VALUES (?,?)");
+                $ins = $pdo->prepare(
+                    "INSERT INTO coordenador_curso (utilizador_id, curso_id)
+                     SELECT ?, id FROM cursos WHERE id = ?"); // ignora ids de cursos que não existam
                 foreach ($cursos as $cid) { $ins->execute([$id, $cid]); }
             }
 
-            // Docente: liga a conta ao registo na tabela docentes
+            // Docente: liga a conta ao registo na tabela docentes — só a um
+            // registo ainda livre (ou já desta conta), nunca "roubando" o de
+            // outra conta por um id forjado no pedido.
             $pdo->prepare("UPDATE docentes SET utilizador_id=NULL WHERE utilizador_id=?")->execute([$id]);
             if ($perfil === 'Docente' && $docente_id > 0) {
-                $pdo->prepare("UPDATE docentes SET utilizador_id=? WHERE id=?")->execute([$id, $docente_id]);
+                $pdo->prepare("UPDATE docentes SET utilizador_id=? WHERE id=? AND utilizador_id IS NULL")
+                    ->execute([$id, $docente_id]);
             }
+            $pdo->commit();
 
-            definirFlash('ok', 'Utilizador guardado.');
+            if ($novoHash !== null) {
+                if ($souEu) {
+                    // Mudei a minha própria: a sessão atual continua (com a
+                    // marca nova); as outras desta conta terminam.
+                    $_SESSION['senha_marca'] = marcaDaSenha($novoHash);
+                    definirMudancaObrigatoria($pdo, $id, false);
+                } else {
+                    // Palavra-passe escolhida pelo Administrador é sempre
+                    // provisória: a pessoa troca-a no primeiro acesso, e a
+                    // partir daí só ela a conhece.
+                    definirMudancaObrigatoria($pdo, $id, true);
+                }
+            }
+            registarAuditoria($pdo, $criada ? 'utilizador_criado' : 'utilizador_editado',
+                $email . ' (' . $perfil . ')' . ($novoHash !== null && !$criada ? ' — palavra-passe redefinida' : ''));
+
+            definirFlash('ok', 'Utilizador guardado.'
+                . ($novoHash !== null && !$souEu ? ' A palavra-passe é provisória: vai ser pedida uma nova no primeiro acesso.' : ''));
             header('Location: utilizadores.php'); exit;
-        } catch (PDOException $e) {
-            $erro = "Não foi possível guardar (e-mail repetido?).";
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) { $pdo->rollBack(); }
+            error_log('Erro ao guardar utilizador: ' . $e->getMessage());
+            $erro = "Não foi possível guardar — confirma se já existe outra conta com este e-mail.";
+            if (!empty($criada)) { $id = 0; } // a conta nova não chegou a existir
         }
     }
 }
@@ -165,9 +214,14 @@ require_once __DIR__ . '/../includes/header.php';
                         <option <?= (($editar['perfil'] ?? '')===$p)?'selected':'' ?>><?= $p ?></option>
                         <?php endforeach; ?>
                     </select></div>
-                <div class="campo"><label>Palavra-passe <?= $editar ? '(vazio = manter)' : '' ?></label>
-                    <input class="form-control" type="password" name="senha" <?= $editar ? '' : 'required' ?>></div>
+                <div class="campo"><label>Palavra-passe provisória <?= $editar ? '(vazio = manter)' : '' ?></label>
+                    <input class="form-control" type="password" name="senha" minlength="<?= SENHA_MIN ?>" maxlength="<?= SENHA_MAX_BYTES ?>"
+                           autocomplete="new-password" <?= $editar ? '' : 'required' ?>></div>
             </div>
+            <p style="margin:8px 0 0;color:var(--ink-soft);font-size:.76rem">
+                Mínimo <?= SENHA_MIN ?> caracteres. Uma palavra-passe definida aqui é provisória: no primeiro acesso,
+                o sistema obriga a pessoa a escolher a sua antes de continuar.
+            </p>
 
             <div class="campo" style="margin-top:15px">
                 <label>Cursos que gere (só para Coordenador)</label>
@@ -208,13 +262,26 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="data-table-wrap">
         <table class="data-table" id="tabela-utilizadores">
-            <thead><tr><th>Utilizador</th><th>Perfil</th><th>Cursos geridos</th><th>Estado</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Utilizador</th><th>Perfil</th><th>Cursos geridos</th><th>Última entrada</th><th>Estado</th><th>Ações</th></tr></thead>
             <tbody>
-            <?php foreach ($lista as $u): ?>
+            <?php foreach ($lista as $u):
+                // Inativa e nunca entrou = registo feito em auth/registar.php à espera de ativação.
+                $porAtivar = !$u['ativo'] && array_key_exists('ultimo_login', $u) && $u['ultimo_login'] === null;
+            ?>
             <tr>
                 <td><div class="cell-main"><span class="cell-icon"><?= htmlspecialchars(mb_strtoupper(mb_substr($u['nome'], 0, 2))) ?></span><span><strong><?= htmlspecialchars($u['nome']) ?></strong><small><?= htmlspecialchars($u['email']) ?></small></span></div></td>
                 <td><?= htmlspecialchars($u['perfil']) ?></td>
                 <td><?= htmlspecialchars($u['cursos_geridos'] ?? '—') ?></td>
+                <td>
+                    <?php if (!empty($u['ultimo_login'])): ?>
+                        <small style="color:var(--ink-soft)"><?= htmlspecialchars(date('d/m/Y H:i', strtotime($u['ultimo_login']))) ?></small>
+                    <?php elseif ($porAtivar): ?>
+                        <span class="badge badge-info">registo novo — por ativar</span>
+                    <?php else: ?>
+                        <small style="color:var(--ink-soft)">nunca entrou</small>
+                    <?php endif; ?>
+                    <?php if (!empty($u['deve_mudar_senha'])): ?><br><small style="color:var(--ink-soft)">palavra-passe provisória</small><?php endif; ?>
+                </td>
                 <td><span class="badge celula-estado <?= $u['ativo'] ? 'badge-success' : 'badge-warning' ?>"><span class="status-dot"></span><?= $u['ativo'] ? 'Ativo' : 'Inativo' ?></span></td>
                 <td>
                     <div class="actions">

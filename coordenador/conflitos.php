@@ -6,12 +6,14 @@ require_once __DIR__ . '/../includes/funcoes_conflitos.php';
 require_once __DIR__ . '/../includes/icons.php';
 
 $curso = exigirCursoDoCoordenador($pdo);
-$horarioId = (int)($_SESSION['horario_id_atual'] ?? 0);
 $ok = null;
 
-if (!$horarioId) {
+// Confirma que o horário em sessão é mesmo de uma turma do curso aberto.
+$horarioAtual = horarioDoCursoEmSessao($pdo, $curso);
+if (!$horarioAtual) {
     header('Location: ' . BASE_URL . '/coordenador/editor_horario.php'); exit;
 }
+$horarioId = (int)$horarioAtual['id'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revalidar'])) {
     validarCSRF();

@@ -22,6 +22,23 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ============================================================
+    // Substitutos dos atributos onchange="..." / onclick="..." que
+    // existiam no HTML: a Content-Security-Policy (includes/seguranca.php)
+    // não deixa correr JavaScript escrito dentro de atributos — é isso
+    // que impede um script injetado de correr. Em vez deles:
+    //   <select data-auto-submit>   — envia o formulário ao mudar
+    //   <button data-imprimir>      — abre o diálogo de impressão
+    // ============================================================
+    document.querySelectorAll('[data-auto-submit]').forEach(function (el) {
+        el.addEventListener('change', function () {
+            if (el.form) { el.form.submit(); }
+        });
+    });
+    document.querySelectorAll('[data-imprimir]').forEach(function (el) {
+        el.addEventListener('click', function () { window.print(); });
+    });
+
+    // ============================================================
     // Toast simples (canto do ecrã) para ações só decorativas —
     // distinto do mostrarToast() de baixo, que é o que dá feedback
     // real das ações AJAX (eliminar/ativar).
@@ -125,6 +142,18 @@ document.addEventListener('DOMContentLoaded', function () {
     // sucesso — um erro (ex.: FK a bloquear) mantém a linha e mostra
     // porquê no toast.
     // ============================================================
+    // O servidor responde sempre em JSON a estes pedidos, incluindo nos
+    // erros (sessão terminada = 401, token expirado = 419 — ver
+    // includes/auth.php e includes/csrf.php), por isso a mensagem certa
+    // chega ao toast. Se mesmo assim vier outra coisa (uma página de erro
+    // do próprio Apache, por exemplo), mostra-se um aviso útil em vez de
+    // "não foi possível ligar", que mandava as pessoas verificar a internet.
+    function respostaJson(resp) {
+        return resp.json().catch(function () {
+            return { sucesso: false, mensagem: 'O servidor não respondeu como esperado. Atualiza a página e tenta novamente.' };
+        });
+    }
+
     function eliminarPorAjax(form) {
         var alvo = form.closest(form.dataset.ajaxRemover);
         var botao = form.querySelector('button[type="submit"]');
@@ -135,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: new FormData(form),
         })
-            .then(function (resp) { return resp.json(); })
+            .then(respostaJson)
             .then(function (dados) {
                 if (dados.sucesso && alvo) {
                     alvo.classList.add('a-remover');
@@ -168,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: new FormData(form),
         })
-            .then(function (resp) { return resp.json(); })
+            .then(respostaJson)
             .then(function (dados) {
                 if (dados.sucesso && linha && dados.ativo !== null && dados.ativo !== undefined) {
                     var ativo = !!dados.ativo;

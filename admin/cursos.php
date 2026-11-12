@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['eliminar'])) {
         try {
-            $pdo->prepare("DELETE FROM cursos WHERE id = ?")->execute([(int)$_POST['eliminar']]);
+            $pdo->prepare("DELETE FROM cursos WHERE id = ?")->execute([(int)postTexto('eliminar', 12)]);
             $sucesso = true; $mensagem = 'Curso eliminado.';
         } catch (PDOException $e) {
             $sucesso = false; $mensagem = 'Não é possível eliminar: há disciplinas, turmas ou coordenadores associados a este curso.';
@@ -20,9 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: cursos.php'); exit;
     }
 
-    $nome  = trim($_POST['nome'] ?? '');
-    $sigla = strtoupper(trim($_POST['sigla'] ?? ''));
-    $id    = (int)($_POST['id'] ?? 0);
+    $nome  = postTexto('nome', 100);
+    $sigla = mb_strtoupper(postTexto('sigla', 10));
+    $id    = (int)postTexto('id', 12);
 
     if ($nome === '' || $sigla === '') {
         $erro = "Preenche o nome e a sigla.";
@@ -70,7 +70,7 @@ require_once __DIR__ . '/../includes/header.php';
             <input type="hidden" name="id" value="<?= $editar['id'] ?? 0 ?>">
             <div class="campo">
                 <label for="f-nome">Nome do curso</label>
-                <input class="form-control" type="text" id="f-nome" name="nome" required
+                <input class="form-control" type="text" id="f-nome" name="nome" maxlength="100" required
                        value="<?= htmlspecialchars($editar['nome'] ?? '') ?>">
             </div>
             <div class="campo">

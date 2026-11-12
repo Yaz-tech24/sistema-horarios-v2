@@ -8,11 +8,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     validarCSRF();
 
     if (isset($_POST['eliminar'])) {
+        $elimId = (int)postTexto('eliminar', 12);
+        // Transação: se o docente não puder ser eliminado (tem aulas ou é
+        // regente de alguma disciplina), a lista de disciplinas que pode
+        // lecionar também não se perde — antes era apagada na mesma.
+        $pdo->beginTransaction();
         try {
-            $pdo->prepare("DELETE FROM docente_disciplina WHERE docente_id = ?")->execute([(int)$_POST['eliminar']]);
-            $pdo->prepare("DELETE FROM docentes WHERE id = ?")->execute([(int)$_POST['eliminar']]);
+            $pdo->prepare("DELETE FROM docente_disciplina WHERE docente_id = ?")->execute([$elimId]);
+            $pdo->prepare("DELETE FROM docentes WHERE id = ?")->execute([$elimId]);
+            $pdo->commit();
             $sucesso = true; $mensagem = 'Docente eliminado.';
         } catch (PDOException $e) {
+            $pdo->rollBack();
             $sucesso = false; $mensagem = 'Não é possível eliminar: este docente é regente/assistente de disciplinas ou já tem aulas marcadas.';
         }
         if (ehPedidoAjax()) { responderAjax($sucesso, $mensagem); }
@@ -20,30 +27,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: docentes.php'); exit;
     }
 
-    $nome = trim($_POST['nome'] ?? '');
-    $cat  = trim($_POST['categoria'] ?? '');
-    $id   = (int)($_POST['id'] ?? 0);
-    $disc = array_map('intval', $_POST['disciplinas'] ?? []);
+    $nome = postTexto('nome', 150);
+    $cat  = postTexto('categoria', 50);
+    $id   = (int)postTexto('id', 12);
+    $disc = is_array($_POST['disciplinas'] ?? null) ? array_unique(array_map('intval', $_POST['disciplinas'])) : [];
 
     if ($nome === '') {
         $erro = "Preenche o nome do docente.";
     } else {
-        if ($id > 0) {
-            $stmt = $pdo->prepare("UPDATE docentes SET nome=?, categoria=? WHERE id=?");
-            $stmt->execute([$nome, $cat, $id]);
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO docentes (nome, categoria) VALUES (?,?)");
-            $stmt->execute([$nome, $cat]);
-            $id = (int)$pdo->lastInsertId();
+        // Numa transação: a lista de disciplinas é apagada e recriada, e um
+        // erro a meio deixava o docente sem nenhuma.
+        $pdo->beginTransaction();
+        try {
+            if ($id > 0) {
+                $stmt = $pdo->prepare("UPDATE docentes SET nome=?, categoria=? WHERE id=?");
+                $stmt->execute([$nome, $cat, $id]);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO docentes (nome, categoria) VALUES (?,?)");
+                $stmt->execute([$nome, $cat]);
+                $id = (int)$pdo->lastInsertId();
+            }
+            // Reatribui as disciplinas que este docente pode lecionar — esta
+            // lista é usada para filtrar os selects de regente/assistente no
+            // Editor de Horário (ver coordenador/editor_horario.php).
+            // INSERT ... SELECT: só liga a docentes e disciplinas que existam
+            // mesmo, em vez de rebentar com um id inválido vindo do pedido.
+            $pdo->prepare("DELETE FROM docente_disciplina WHERE docente_id=?")->execute([$id]);
+            $ins = $pdo->prepare(
+                "INSERT INTO docente_disciplina (docente_id, disciplina_id)
+                 SELECT doc.id, d.id FROM docentes doc, disciplinas d WHERE doc.id = ? AND d.id = ?");
+            foreach ($disc as $did) { $ins->execute([$id, $did]); }
+            $pdo->commit();
+            definirFlash('ok', 'Docente guardado.');
+            header('Location: docentes.php'); exit;
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            error_log('Erro ao guardar docente: ' . $e->getMessage());
+            $erro = "Não foi possível guardar o docente. Tenta novamente.";
         }
-        // Reatribui as disciplinas que este docente pode lecionar — esta
-        // lista é usada para filtrar os selects de regente/assistente no
-        // Editor de Horário (ver coordenador/editor_horario.php).
-        $pdo->prepare("DELETE FROM docente_disciplina WHERE docente_id=?")->execute([$id]);
-        $ins = $pdo->prepare("INSERT INTO docente_disciplina (docente_id, disciplina_id) VALUES (?,?)");
-        foreach ($disc as $did) { $ins->execute([$id, $did]); }
-        definirFlash('ok', 'Docente guardado.');
-        header('Location: docentes.php'); exit;
     }
 }
 

@@ -50,9 +50,16 @@ if ($turmaAtual) {
 
     // Carregar uma aula existente para edição (form pré-preenchido abaixo)
     if (isset($_GET['editar_aula'])) {
-        $stmt = $pdo->prepare("SELECT * FROM aulas WHERE id=? AND horario_id=? AND tipo_bloco != 'Atividade_Nao_Letiva'");
+        $stmt = $pdo->prepare("SELECT * FROM aulas WHERE id=? AND horario_id=?");
         $stmt->execute([(int)$_GET['editar_aula'], $horario['id']]);
         $edicao = $stmt->fetch() ?: null;
+        // Só a Pastoral (RN08) não se edita — antes ficava de fora qualquer
+        // Atividade Não Letiva, e o link "editar" dessas abria o formulário
+        // em modo "nova aula" sem dizer nada.
+        if ($edicao && $edicao['tipo_bloco'] === 'Atividade_Nao_Letiva'
+            && ehBlocoPastoral($turmaAtual, $edicao['dia_semana'], substr($edicao['hora_inicio'],0,5), substr($edicao['hora_fim'],0,5))) {
+            $edicao = null;
+        }
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -70,14 +77,37 @@ if ($turmaAtual) {
                 $stmt->execute([$salaForcada]);
                 if (!$stmt->fetch()) { $salaForcada = null; }
             }
-            $_SESSION['resultado_geracao'] = gerarHorarioAutomatico($pdo, $horario, $turmaAtual, $curso, $limpar, $salaForcada);
-            definirFlash('ok', 'Geração automática concluída.');
+            // Tudo ou nada: a geração apaga (se pedido) e cria dezenas de
+            // linhas — um erro a meio deixava o horário meio apagado, meio
+            // gerado. Em transação, ou fica completo ou fica como estava.
+            $pdo->beginTransaction();
+            try {
+                // Num horário já Publicado, a geração muda o horário que os
+                // docentes estão a usar — avisa quem tinha e quem passa a ter aulas.
+                $publicado = $horario['estado'] === 'Publicado';
+                $docentesAntes = $publicado ? utilizadoresDoHorario($pdo, (int)$horario['id']) : [];
+                $resultado = gerarHorarioAutomatico($pdo, $horario, $turmaAtual, $curso, $limpar, $salaForcada);
+                if ($publicado && ($limpar || $resultado['criadas'] > 0)) {
+                    notificarUtilizadores($pdo,
+                        array_merge($docentesAntes, utilizadoresDoHorario($pdo, (int)$horario['id'])),
+                        "O horário de " . $curso['sigla'] . " " . (int)$turmaAtual['ano_curricular'] . "º ano (turma "
+                        . $turmaAtual['nome_turma'] . ") foi alterado pelo coordenador. Confirma o teu horário.");
+                }
+                $_SESSION['resultado_geracao'] = $resultado;
+                $pdo->commit();
+                definirFlash('ok', 'Geração automática concluída.');
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                unset($_SESSION['resultado_geracao']);
+                error_log('Geração automática falhou: ' . $e->getMessage());
+                definirFlash('erro', 'A geração automática falhou e nada foi alterado. Tenta novamente.');
+            }
             header('Location: editor_horario.php'); exit;
         }
 
         // Apagar aula
         if ($acao === 'apagar') {
-            $aid = (int)($_POST['aula_id'] ?? 0);
+            $aid = (int)postTexto('aula_id', 12);
             $stmt = $pdo->prepare("SELECT a.*, d.nome AS disc FROM aulas a
                                     LEFT JOIN disciplinas d ON a.disciplina_id=d.id
                                     WHERE a.id=? AND a.horario_id=?");
@@ -89,18 +119,33 @@ if ($turmaAtual) {
                     $sucesso = false;
                     $mensagem = 'Este bloco é a Pastoral Universitária (obrigatória em regime Laboral) e não pode ser removido.';
                 } else {
-                    notificarDocenteDaAula($pdo, $aid,
-                        "A aula de " . ($a['disc'] ?? 'bloco') . " (" . $a['dia_semana'] . " "
-                        . substr($a['hora_inicio'],0,5) . ") foi removida do horário.", false);
-                    $pdo->prepare("DELETE FROM conflitos WHERE aula_id_1=? OR aula_id_2=?")->execute([$aid,$aid]);
-                    // Os pedidos dos docentes sobrevivem à aula: perde-se a
-                    // ligação mas o texto de referência mantém-nos legíveis.
-                    $pdo->prepare("UPDATE pedidos SET aula_id=NULL WHERE aula_id=?")->execute([$aid]);
-                    $pdo->prepare("DELETE FROM aulas WHERE id=?")->execute([$aid]);
-                    registarHistorico($pdo, (int)$horario['id'],
-                        "Removida aula de " . ($a['disc'] ?? 'bloco') . " (" . $a['dia_semana'] . ")");
-                    $sucesso = true;
-                    $mensagem = 'Aula removida.';
+                    $pdo->beginTransaction();
+                    try {
+                        // Só os docentes de um horário já Publicado sabem da
+                        // aula — num rascunho, avisar que "foi removida" uma
+                        // aula que nunca viram só gerava confusão.
+                        if ($horario['estado'] === 'Publicado') {
+                            notificarDocenteDaAula($pdo, $aid,
+                                "A aula de " . ($a['disc'] ?? 'bloco') . " (" . $a['dia_semana'] . " "
+                                . substr($a['hora_inicio'],0,5) . ") foi removida do horário.", false);
+                        }
+                        $pdo->prepare("DELETE FROM conflitos WHERE aula_id_1=? OR aula_id_2=?")->execute([$aid,$aid]);
+                        // Os pedidos dos docentes sobrevivem à aula: perde-se a
+                        // ligação mas o texto de referência mantém-nos legíveis.
+                        $pdo->prepare("UPDATE pedidos SET aula_id=NULL WHERE aula_id=?")->execute([$aid]);
+                        $pdo->prepare("UPDATE notificacoes SET aula_id=NULL WHERE aula_id=?")->execute([$aid]);
+                        $pdo->prepare("DELETE FROM aulas WHERE id=? AND horario_id=?")->execute([$aid, $horario['id']]);
+                        registarHistorico($pdo, (int)$horario['id'],
+                            "Removida aula de " . ($a['disc'] ?? 'bloco') . " (" . $a['dia_semana'] . ")");
+                        $pdo->commit();
+                        $sucesso = true;
+                        $mensagem = 'Aula removida.';
+                    } catch (PDOException $e) {
+                        $pdo->rollBack();
+                        error_log('Erro ao remover aula: ' . $e->getMessage());
+                        $sucesso = false;
+                        $mensagem = 'Não foi possível remover este bloco. Tenta novamente.';
+                    }
                 }
             } else {
                 $sucesso = false;
@@ -113,25 +158,49 @@ if ($turmaAtual) {
 
         // Criar ou atualizar aula
         if (isset($_POST['dia_semana'])) {
-            $aulaId = (int)($_POST['aula_id'] ?? 0);
-            $bloco  = $_POST['bloco'] ?? '';
-            $regenteId    = (int)($_POST['docente_regente_id'] ?? 0) ?: null;
-            $assistenteId = (int)($_POST['docente_assistente_id'] ?? 0) ?: null;
+            $aulaId = (int)postTexto('aula_id', 12);
+            $bloco  = postTexto('bloco', 11);
+            $tipoBloco = in_array($_POST['tipo_bloco'] ?? '', ['Aula','Estudo_Autonomo','Atividade_Nao_Letiva'], true)
+                ? $_POST['tipo_bloco'] : 'Aula';
+            $ehAula = $tipoBloco === 'Aula';
+            // Disciplina, docentes, sala e subgrupo só existem numa "Aula".
+            // Os campos ficam escondidos no formulário para os outros tipos,
+            // mas continuam a ser enviados com o último valor escolhido —
+            // sem os limpar aqui, um bloco de Estudo Autónomo ficava gravado
+            // com um docente e uma sala "fantasma" que mais ninguém via.
+            $regenteId    = $ehAula ? ((int)postTexto('docente_regente_id', 12) ?: null) : null;
+            $assistenteId = $ehAula ? ((int)postTexto('docente_assistente_id', 12) ?: null) : null;
             $partesBloco  = explode('|', $bloco);
             $aula = [
                 'horario_id'    => (int)$horario['id'],
                 'turma_id'      => $turmaId,
-                'tipo_bloco'    => $_POST['tipo_bloco'] ?? 'Aula',
-                'disciplina_id' => (int)($_POST['disciplina_id'] ?? 0) ?: null,
+                'tipo_bloco'    => $tipoBloco,
+                'disciplina_id' => $ehAula ? ((int)postTexto('disciplina_id', 12) ?: null) : null,
                 'docente_id'    => $regenteId, // espelha docente_regente_id — ver nota em funcoes_coordenador.php
                 'docente_regente_id'    => $regenteId,
                 'docente_assistente_id' => $assistenteId,
-                'sala_id'       => (int)($_POST['sala_id'] ?? 0) ?: null,
-                'subgrupo'      => trim($_POST['subgrupo'] ?? '') ?: null,
-                'dia_semana'    => $_POST['dia_semana'],
+                'sala_id'       => $ehAula ? ((int)postTexto('sala_id', 12) ?: null) : null,
+                // RN07 — gravado já normalizado ("p1 " → "P1"), para a grelha,
+                // as exportações e o motor de conflitos verem o mesmo subgrupo.
+                'subgrupo'      => $ehAula ? normalizarSubgrupo(postTexto('subgrupo', 10)) : null,
+                'dia_semana'    => postTexto('dia_semana', 10),
                 'hora_inicio'   => $partesBloco[0] ?? '',
                 'hora_fim'      => $partesBloco[1] ?? '',
             ];
+
+            // O que vem do formulário são ids — confirma-se que cada um
+            // aponta para algo que este coordenador pode mesmo usar aqui.
+            $existe = function (string $sql, array $params) use ($pdo): bool {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                return (bool)$stmt->fetch();
+            };
+            $aulaAtual = null;
+            if ($aulaId > 0) {
+                $stmt = $pdo->prepare("SELECT * FROM aulas WHERE id=? AND horario_id=?");
+                $stmt->execute([$aulaId, $horario['id']]);
+                $aulaAtual = $stmt->fetch() ?: null;
+            }
 
             // RN16 — uma disciplina Prática/Laboratorial com laboratório
             // próprio (admin/disciplinas.php) tem esse laboratório como
@@ -145,54 +214,153 @@ if ($turmaAtual) {
 
             if (!in_array($aula['dia_semana'], DIAS_SEMANA, true) || !isset($blocosValidos[$bloco])) {
                 $erro = "Escolhe o dia e o bloco horário (tem de ser um dos blocos do turno desta turma).";
-            } elseif ($aula['tipo_bloco'] === 'Aula' && !$aula['disciplina_id']) {
+            } elseif ($aulaId > 0 && !$aulaAtual) {
+                $erro = "Esse bloco já não existe neste horário (talvez tenha sido removido). Atualiza a página.";
+            } elseif ($aulaAtual && $aulaAtual['tipo_bloco'] === 'Atividade_Nao_Letiva'
+                && ehBlocoPastoral($turmaAtual, $aulaAtual['dia_semana'], substr($aulaAtual['hora_inicio'],0,5), substr($aulaAtual['hora_fim'],0,5))) {
+                // RN08 — o link "editar" nem aparece na Pastoral, mas o id
+                // dela podia vir num pedido feito à mão.
+                $erro = "O bloco da Pastoral Universitária é obrigatório e não pode ser alterado.";
+            } elseif ($ehAula && !$aula['disciplina_id']) {
                 $erro = "Uma aula precisa de uma disciplina.";
+            } elseif ($ehAula && !$existe("SELECT 1 FROM disciplinas WHERE id=? AND curso_id=? AND ano_curricular=?",
+                    [$aula['disciplina_id'], $curso['id'], $turmaAtual['ano_curricular']])) {
+                // Sem isto dava para marcar, no horário deste curso, uma
+                // disciplina de um curso que o coordenador não gere.
+                $erro = "Essa disciplina não é do " . (int)$turmaAtual['ano_curricular'] . "º ano deste curso.";
+            } elseif ($regenteId && !$existe("SELECT 1 FROM docentes WHERE id=?", [$regenteId])) {
+                $erro = "O docente regente escolhido já não existe. Atualiza a página.";
+            } elseif ($assistenteId && !$existe("SELECT 1 FROM docentes WHERE id=?", [$assistenteId])) {
+                $erro = "O docente assistente escolhido já não existe. Atualiza a página.";
+            } elseif ($assistenteId && $assistenteId === $regenteId) {
+                $erro = "O assistente tem de ser um docente diferente do regente.";
+            } elseif ($aula['sala_id'] && !$existe("SELECT 1 FROM salas WHERE id=?", [$aula['sala_id']])) {
+                $erro = "A sala escolhida já não existe. Atualiza a página.";
             } else {
                 $problemas = verificarConflitos($pdo, $aula, $aulaId ?: null);
                 $errosBloq = array_filter($problemas, fn($p) => $p['bloqueante']);
                 $avisosNovos = array_filter($problemas, fn($p) => !$p['bloqueante']);
 
+                // Os outros blocos desta turma neste mesmo dia/bloco (o que
+                // está a ser editado não conta). O motor de conflitos só
+                // compara aulas com aulas (RN06) — sem isto, uma aula marcada
+                // por cima de um Estudo Autónomo ficava com os dois blocos no
+                // mesmo quadrado da grelha, da exportação e da folha impressa.
+                //  - aula da turma inteira sobre Estudo Autónomo → a aula
+                //    substitui-o (o Estudo Autónomo é só o preenchimento dos
+                //    blocos livres);
+                //  - aula de um subgrupo sobre Estudo Autónomo → ficam os dois
+                //    (os outros alunos continuam em estudo autónomo);
+                //  - qualquer bloco sobre uma Atividade Não Letiva, e Estudo/
+                //    Atividade sobre outro bloco não letivo ou sobre uma aula
+                //    da turma inteira → recusado, com o motivo.
+                $erroOcupado = null;
+                $estudosASubstituir = [];
+                if (!$errosBloq) {
+                    $stmt = $pdo->prepare(
+                        "SELECT a.id, a.tipo_bloco, a.subgrupo, a.dia_semana, a.hora_inicio, a.hora_fim, d.nome AS disc
+                         FROM aulas a LEFT JOIN disciplinas d ON d.id = a.disciplina_id
+                         WHERE a.horario_id=? AND a.dia_semana=? AND a.hora_inicio=? AND a.hora_fim=? AND a.id != ?");
+                    $stmt->execute([$horario['id'], $aula['dia_semana'], $aula['hora_inicio'], $aula['hora_fim'], $aulaId]);
+                    foreach ($stmt->fetchAll() as $o) {
+                        if ($o['tipo_bloco'] === 'Estudo_Autonomo') {
+                            if ($ehAula && $aula['subgrupo'] === null) { $estudosASubstituir[] = (int)$o['id']; }
+                            elseif (!$ehAula) { $erroOcupado = "Este bloco já tem Estudo Autónomo."; }
+                        } elseif ($o['tipo_bloco'] === 'Atividade_Nao_Letiva') {
+                            $erroOcupado = ehBlocoPastoral($turmaAtual, $o['dia_semana'], substr($o['hora_inicio'],0,5), substr($o['hora_fim'],0,5))
+                                ? "Este bloco é o da Pastoral Universitária — escolhe outro."
+                                : "Este bloco já tem uma Atividade Não Letiva — remove-a primeiro ou escolhe outro bloco.";
+                        } elseif (!$ehAula && normalizarSubgrupo($o['subgrupo']) === null) {
+                            $erroOcupado = "A turma já tem aula de \"" . ($o['disc'] ?? '—')
+                                . "\" neste bloco — remove-a primeiro ou escolhe outro bloco.";
+                        }
+                    }
+                }
+
                 if ($errosBloq) {
                     // Não grava — mostra os conflitos
+                } elseif ($erroOcupado) {
+                    $erro = $erroOcupado;
                 } elseif ($avisosNovos && !isset($_POST['confirmar_aviso'])) {
                     $avisos = $avisosNovos; // pede confirmação
-                } elseif ($aulaId > 0) {
-                    $pdo->prepare(
-                        "UPDATE aulas SET disciplina_id=?, docente_id=?, docente_regente_id=?, docente_assistente_id=?,
-                            sala_id=?, tipo_bloco=?, subgrupo=?, dia_semana=?, hora_inicio=?, hora_fim=?
-                         WHERE id=? AND horario_id=?")
-                        ->execute([
-                            $aula['disciplina_id'], $aula['docente_id'], $aula['docente_regente_id'],
-                            $aula['docente_assistente_id'], $aula['sala_id'], $aula['tipo_bloco'],
-                            $aula['subgrupo'], $aula['dia_semana'], $aula['hora_inicio'], $aula['hora_fim'],
-                            $aulaId, $horario['id'],
-                        ]);
-                    // Os conflitos antigos referentes a esta aula ficam desatualizados
-                    // assim que ela muda — a próxima revalidação (página Conflitos)
-                    // deteta o estado novo e faz o diff correto (ver revalidarHorario).
-                    registarHistorico($pdo, (int)$horario['id'], "Editada aula (" . $aula['dia_semana'] . " " . $aula['hora_inicio'] . ")");
-                    definirFlash('ok', 'Aula atualizada.');
-                    header('Location: editor_horario.php'); exit;
                 } else {
-                    $pdo->prepare(
-                        "INSERT INTO aulas (horario_id, disciplina_id, docente_id, docente_regente_id, docente_assistente_id,
-                            sala_id, tipo_bloco, subgrupo, dia_semana, hora_inicio, hora_fim)
-                         VALUES (?,?,?,?,?,?,?,?,?,?,?)")
-                        ->execute([
-                            $aula['horario_id'], $aula['disciplina_id'], $aula['docente_id'],
-                            $aula['docente_regente_id'], $aula['docente_assistente_id'],
-                            $aula['sala_id'], $aula['tipo_bloco'], $aula['subgrupo'],
-                            $aula['dia_semana'], $aula['hora_inicio'], $aula['hora_fim'],
-                        ]);
-                    $novaAulaId = (int)$pdo->lastInsertId();
-                    registarHistorico($pdo, (int)$horario['id'], "Adicionada aula (" . $aula['dia_semana'] . " " . $aula['hora_inicio'] . ")");
-                    if ($horario['estado'] === 'Publicado') {
-                        notificarDocenteDaAula($pdo, $novaAulaId,
-                            "Foi-te atribuída uma nova aula: " . $aula['dia_semana'] . " às " . $aula['hora_inicio'] . ".");
-                    } else {
-                        iniciarRevisaoSeRascunho($pdo, $horario);
+                    $nomeDisciplina = function (?int $id) use ($pdo): string {
+                        if (!$id) { return 'bloco'; }
+                        $s = $pdo->prepare("SELECT nome FROM disciplinas WHERE id=?");
+                        $s->execute([$id]);
+                        return (string)($s->fetchColumn() ?: 'aula');
+                    };
+                    $publicado = $horario['estado'] === 'Publicado';
+                    $quando = $aula['dia_semana'] . " às " . $aula['hora_inicio'];
+
+                    $pdo->beginTransaction();
+                    try {
+                        if ($aulaId > 0) {
+                            // Quem tinha a aula ANTES da alteração (para o caso de
+                            // o regente/assistente mudar, ou de deixar de ser aula).
+                            $docentesAntes = $publicado ? utilizadoresDaAula($pdo, $aulaId) : [];
+                            $pdo->prepare(
+                                "UPDATE aulas SET disciplina_id=?, docente_id=?, docente_regente_id=?, docente_assistente_id=?,
+                                    sala_id=?, tipo_bloco=?, subgrupo=?, dia_semana=?, hora_inicio=?, hora_fim=?
+                                 WHERE id=? AND horario_id=?")
+                                ->execute([
+                                    $aula['disciplina_id'], $aula['docente_id'], $aula['docente_regente_id'],
+                                    $aula['docente_assistente_id'], $aula['sala_id'], $aula['tipo_bloco'],
+                                    $aula['subgrupo'], $aula['dia_semana'], $aula['hora_inicio'], $aula['hora_fim'],
+                                    $aulaId, $horario['id'],
+                                ]);
+                            $aulaGravada = $aulaId;
+                            // Os conflitos antigos referentes a esta aula ficam desatualizados
+                            // assim que ela muda — a revalidação (logo abaixo, ao desenhar a
+                            // grelha) deteta o estado novo e faz o diff (ver revalidarHorario).
+                            registarHistorico($pdo, (int)$horario['id'], "Editada aula (" . $aula['dia_semana'] . " " . $aula['hora_inicio'] . ")");
+                        } else {
+                            $docentesAntes = [];
+                            $pdo->prepare(
+                                "INSERT INTO aulas (horario_id, disciplina_id, docente_id, docente_regente_id, docente_assistente_id,
+                                    sala_id, tipo_bloco, subgrupo, dia_semana, hora_inicio, hora_fim)
+                                 VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+                                ->execute([
+                                    $aula['horario_id'], $aula['disciplina_id'], $aula['docente_id'],
+                                    $aula['docente_regente_id'], $aula['docente_assistente_id'],
+                                    $aula['sala_id'], $aula['tipo_bloco'], $aula['subgrupo'],
+                                    $aula['dia_semana'], $aula['hora_inicio'], $aula['hora_fim'],
+                                ]);
+                            $aulaGravada = (int)$pdo->lastInsertId();
+                            registarHistorico($pdo, (int)$horario['id'], "Adicionada aula (" . $aula['dia_semana'] . " " . $aula['hora_inicio'] . ")");
+                            if (!$publicado) { iniciarRevisaoSeRascunho($pdo, $horario); }
+                        }
+
+                        if ($estudosASubstituir) {
+                            removerBlocos($pdo, (int)$horario['id'], $estudosASubstituir);
+                            registarHistorico($pdo, (int)$horario['id'],
+                                "Estudo Autónomo de " . $aula['dia_semana'] . " " . $aula['hora_inicio'] . " substituído pela aula");
+                        }
+
+                        // Num horário já Publicado, mexer numa aula muda o dia a dia
+                        // de alguém: quem a deixou de ter, quem a passou a ter e quem
+                        // a continua a ter (com outro dia, hora ou sala).
+                        if ($publicado) {
+                            $docentesDepois = utilizadoresDaAula($pdo, $aulaGravada);
+                            $disc = $nomeDisciplina($aula['disciplina_id']);
+                            if ($aulaAtual) {
+                                $antes = $nomeDisciplina($aulaAtual['disciplina_id'] ? (int)$aulaAtual['disciplina_id'] : null)
+                                    . " (" . $aulaAtual['dia_semana'] . " " . substr($aulaAtual['hora_inicio'], 0, 5) . ")";
+                                notificarUtilizadores($pdo, array_diff($docentesAntes, $docentesDepois),
+                                    "A aula de $antes deixou de estar atribuída a ti.");
+                            }
+                            notificarUtilizadores($pdo, array_diff($docentesDepois, $docentesAntes),
+                                "Foi-te atribuída uma aula de $disc: $quando.", $aulaGravada);
+                            notificarUtilizadores($pdo, array_intersect($docentesDepois, $docentesAntes),
+                                "A tua aula de $disc foi alterada: agora é $quando. Confirma no teu horário.", $aulaGravada);
+                        }
+                        $pdo->commit();
+                    } catch (Throwable $e) {
+                        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                        throw $e; // erro inesperado: vai para o log (includes/seguranca.php)
                     }
-                    definirFlash('ok', 'Aula guardada sem conflitos.');
+
+                    definirFlash('ok', $aulaId > 0 ? 'Aula atualizada.' : 'Aula guardada sem conflitos.');
                     header('Location: editor_horario.php'); exit;
                 }
             }
@@ -265,7 +433,9 @@ foreach ($pdo->query("SELECT disciplina_id, docente_id FROM docente_disciplina")
 }
 
 $pageTitle = 'Editor de horário';
-$pageDescription = htmlspecialchars($curso['nome']) . ($horario ? ' · Estado: ' . str_replace('_',' ',$horario['estado']) . ' · Turno: ' . str_replace(['Manha','Tarde'], ['Manhã','Tarde'], $turmaAtual['turno']) : '');
+// (sem htmlspecialchars aqui — o header já escapa $pageDescription; escapar
+// duas vezes mostrava "&amp;" no ecrã em nomes de curso com "&")
+$pageDescription = $curso['nome'] . ($horario ? ' · Estado: ' . str_replace('_',' ',$horario['estado']) . ' · Turno: ' . str_replace(['Manha','Tarde'], ['Manhã','Tarde'], $turmaAtual['turno']) : '');
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -273,7 +443,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="card-body">
         <form method="get" class="form-row" style="grid-template-columns:1fr">
             <div class="campo"><label>Turma</label>
-                <select class="form-control form-select" name="turma" onchange="this.form.submit()">
+                <select class="form-control form-select" name="turma" data-auto-submit>
                     <option value="">— escolher turma —</option>
                     <?php foreach ($turmas as $t): ?>
                     <option value="<?= $t['id'] ?>" <?= ($t['id']==$turmaId)?'selected':'' ?>>
@@ -372,7 +542,7 @@ require_once __DIR__ . '/../includes/header.php';
         <form method="post" style="margin-top:10px">
             <?= campoCSRF() ?>
             <?php foreach (['aula_id','tipo_bloco','disciplina_id','docente_regente_id','docente_assistente_id','sala_id','subgrupo','dia_semana','bloco'] as $fld): ?>
-                <input type="hidden" name="<?= $fld ?>" value="<?= htmlspecialchars($_POST[$fld] ?? '') ?>">
+                <input type="hidden" name="<?= $fld ?>" value="<?= htmlspecialchars(postTexto($fld, 40)) ?>">
             <?php endforeach; ?>
             <input type="hidden" name="confirmar_aviso" value="1">
             <button type="submit" class="btn btn-primary" style="width:auto;padding-inline:1.6rem">Gravar mesmo assim</button>
@@ -509,9 +679,10 @@ require_once __DIR__ . '/../includes/header.php';
 </table>
 </div>
 
-<script>
-    var mapaDocentesDisciplina = <?= json_encode($mapaDocentesDisciplina) ?>;
-    var mapaDisciplinaDocentes = <?= json_encode($mapaDisciplinaDocentes) ?>;
+<script nonce="<?= nonceCSP() ?>">
+    <?php $jsonSeguro = JSON_HEX_TAG | JSON_HEX_AMP; // um "</script>" dentro de um valor nunca fecha este bloco ?>
+    var mapaDocentesDisciplina = <?= json_encode($mapaDocentesDisciplina, $jsonSeguro) ?>;
+    var mapaDisciplinaDocentes = <?= json_encode($mapaDisciplinaDocentes, $jsonSeguro) ?>;
     (function () {
         var selTipo = document.getElementById('f-tipo-bloco');
         var selDisc = document.getElementById('f-disciplina');
