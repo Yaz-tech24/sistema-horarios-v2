@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 exigirPerfil(['Coordenador']);
 require_once __DIR__ . '/../includes/funcoes_coordenador.php';
+require_once __DIR__ . '/../includes/funcoes_notificacoes.php';
 
 // Pedidos que os docentes enviaram sobre os horários deste curso. O
 // âmbito segue a mesma regra do resto do fluxo do coordenador: o curso
@@ -27,13 +28,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pid = (int)postTexto('pedido_id', 12);
     $novoEstado = ($_POST['acao'] ?? '') === 'reabrir' ? 'Aberto' : 'Resolvido';
 
-    if (!pedidoDoCurso($pdo, $pid, $cursoId)) {
+    $pedido = pedidoDoCurso($pdo, $pid, $cursoId);
+    if (!$pedido) {
         $sucesso = false; $mensagem = 'Esse pedido não pertence ao curso que estás a gerir.';
     } else {
         if ($novoEstado === 'Resolvido') {
             $pdo->prepare("UPDATE pedidos SET estado='Resolvido', resolvido_em=NOW(), resolvido_por=? WHERE id=?")
                 ->execute([$_SESSION['utilizador_id'], $pid]);
-            $mensagem = 'Pedido marcado como resolvido.';
+            // O docente fica a saber que o pedido foi tratado — e o que o
+            // coordenador lhe quer dizer, se escreveu alguma coisa. Antes o
+            // pedido mudava de estado sem o docente ser avisado.
+            $resposta = postTexto('resposta', 180);
+            if ($pedido['estado'] !== 'Resolvido') {
+                notificarUtilizadores($pdo, [(int)$pedido['utilizador_id']],
+                    'O teu pedido sobre ' . $pedido['referencia'] . ' foi resolvido pelo coordenador'
+                    . ($resposta !== '' ? ': ' . $resposta : '.'));
+            }
+            $mensagem = 'Pedido marcado como resolvido — o docente foi avisado.';
         } else {
             $pdo->prepare("UPDATE pedidos SET estado='Aberto', resolvido_em=NULL, resolvido_por=NULL WHERE id=?")
                 ->execute([$pid]);
@@ -89,7 +100,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="notification-content">
                 <h3><?= htmlspecialchars($p['docente_nome']) ?>
                     <span style="font-weight:400;color:var(--ink-soft)">·
-                    <?= $p['ano_curricular'] ?>º <?= htmlspecialchars($p['nome_turma']) ?> (<?= htmlspecialchars($p['regime']) ?>)</span>
+                    <?= (int)$p['ano_curricular'] ?>º <?= htmlspecialchars($p['nome_turma']) ?> (<?= htmlspecialchars(rotuloRegime($p['regime'])) ?>)</span>
                 </h3>
                 <p style="color:var(--ink)"><?= nl2br(htmlspecialchars($p['mensagem'])) ?></p>
                 <p style="font-size:.72rem"><strong>Aula:</strong> <?= htmlspecialchars($p['referencia']) ?>
@@ -97,10 +108,14 @@ require_once __DIR__ . '/../includes/header.php';
                 </p>
                 <time><?= htmlspecialchars(substr($p['criado_em'], 0, 16)) ?><?= $p['resolvido_em'] ? ' · resolvido em ' . htmlspecialchars(substr($p['resolvido_em'], 0, 16)) : '' ?></time>
             </div>
-            <form method="post" style="align-self:center">
+            <form method="post" style="align-self:center;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:340px">
                 <?= campoCSRF() ?>
-                <input type="hidden" name="pedido_id" value="<?= $p['id'] ?>">
+                <input type="hidden" name="pedido_id" value="<?= (int)$p['id'] ?>">
                 <input type="hidden" name="acao" value="<?= $aberto ? 'resolver' : 'reabrir' ?>">
+                <?php if ($aberto): ?>
+                <input class="form-control" type="text" name="resposta" maxlength="180" style="flex:1;min-width:160px;height:34px;font-size:.8rem"
+                       placeholder="Resposta ao docente (opcional)" aria-label="Resposta ao docente (opcional)">
+                <?php endif; ?>
                 <button type="submit" class="btn <?= $aberto ? 'btn-primary' : 'btn-secondary' ?> btn-sm">
                     <?= $aberto ? 'Marcar resolvido' : 'Reabrir' ?>
                 </button>

@@ -114,12 +114,12 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="campo" style="margin-top:15px">
-                <label>Disciplinas que pode lecionar</label>
-                <p style="margin:-2px 0 8px;color:var(--ink-soft);font-size:.76rem;">
+                <span class="campo-rotulo" id="rot-disciplinas-docente">Disciplinas que pode lecionar</span>
+                <p id="ajuda-disciplinas-docente" style="margin:-2px 0 8px;color:var(--ink-soft);font-size:.76rem;">
                     Restringe as opções de docente regente/assistente no Editor de Horário a quem aqui estiver marcado
                     (uma disciplina sem ninguém marcado continua a mostrar todos os docentes, para não bloquear o fluxo).
                 </p>
-                <div class="grelha-checkboxes" style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:1px;padding:12px;background:var(--surface)">
+                <div class="grelha-checkboxes" role="group" aria-labelledby="rot-disciplinas-docente" aria-describedby="ajuda-disciplinas-docente" style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:1px;padding:12px;background:var(--surface)">
                     <?php foreach ($disciplinas as $d): ?>
                     <label>
                         <input type="checkbox" name="disciplinas[]" value="<?= $d['id'] ?>"

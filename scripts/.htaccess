@@ -1,0 +1,3 @@
+# Scripts de manutenção (cópias de segurança, etc.) — correm no servidor,
+# nunca pelo browser.
+Require all denied

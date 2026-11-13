@@ -114,8 +114,8 @@ require_once __DIR__ . '/../includes/header.php';
                 <tbody>
                 <?php foreach ($lista as $c): ?>
                 <tr>
-                    <td><?= $c['ano_curricular'] ?>º <?= htmlspecialchars($c['nome_turma']) ?><br><small style="color:var(--ink-soft)"><?= htmlspecialchars($c['regime']) ?></small></td>
-                    <td><?= htmlspecialchars($c['dia_semana']) ?><br><small style="color:var(--ink-soft)"><?= substr($c['hora_inicio'],0,5) ?>–<?= substr($c['hora_fim'],0,5) ?></small></td>
+                    <td><?= (int)$c['ano_curricular'] ?>º <?= htmlspecialchars($c['nome_turma']) ?><br><small style="color:var(--ink-soft)"><?= htmlspecialchars(rotuloRegime($c['regime'])) ?></small></td>
+                    <td><?= htmlspecialchars(rotuloDia($c['dia_semana'])) ?><br><small style="color:var(--ink-soft)"><?= substr($c['hora_inicio'],0,5) ?>–<?= substr($c['hora_fim'],0,5) ?></small></td>
                     <td><span class="badge badge-warning"><?= htmlspecialchars($c['tipo']) ?></span></td>
                     <td><?= htmlspecialchars($c['disc1'] ?? 'bloco sem disciplina') ?></td>
                     <td><?= htmlspecialchars($c['mensagem'] ?? ('Em conflito com "' . ($c['disc2'] ?? 'outra aula') . '".')) ?></td>

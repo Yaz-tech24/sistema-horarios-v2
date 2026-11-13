@@ -39,6 +39,20 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ============================================================
+    // Acessibilidade: em cada campo de formulário (.campo), liga o <label>
+    // ao seu controlo quando a página não o fez (for/id) — os leitores de
+    // ecrã passam a anunciar o nome do campo e clicar no rótulo foca-o.
+    // ============================================================
+    var nCampoAuto = 0;
+    document.querySelectorAll('.campo > label:not([for])').forEach(function (rotulo) {
+        var controlo = rotulo.parentElement.querySelector(
+            'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea');
+        if (!controlo) { return; }
+        if (!controlo.id) { controlo.id = 'campo-auto-' + (++nCampoAuto); }
+        rotulo.htmlFor = controlo.id;
+    });
+
+    // ============================================================
     // Toast simples (canto do ecrã) para ações só decorativas —
     // distinto do mostrarToast() de baixo, que é o que dá feedback
     // real das ações AJAX (eliminar/ativar).
@@ -304,21 +318,27 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Editor de horário: clicar num slot vazio da grelha pré-preenche
-    // o dia e o bloco horário no formulário de "Nova aula" e leva o
-    // foco para lá, para não ser preciso procurar os selects manualmente.
+    // Editor de horário: clicar num slot vazio da grelha abre o formulário
+    // de "Nova aula" por cima da grelha, já com o dia e o bloco — sem levar
+    // a página para o topo (ver window.abrirFormularioAula no editor). Se
+    // essa função não existir, cai no comportamento antigo: pré-preenche e
+    // desloca até ao formulário.
     var selDia = document.getElementById('f-dia');
     var selBloco = document.getElementById('f-bloco');
     if (selDia && selBloco) {
         document.querySelectorAll('td.slot-vazio').forEach(function (slot) {
             function preencher() {
+                slot.classList.add('slot-selecionado');
+                setTimeout(function () { slot.classList.remove('slot-selecionado'); }, 900);
+                if (typeof window.abrirFormularioAula === 'function') {
+                    window.abrirFormularioAula(slot.dataset.dia, slot.dataset.bloco);
+                    return;
+                }
                 selDia.value = slot.dataset.dia;
                 selBloco.value = slot.dataset.bloco;
                 document.getElementById('form-nova-aula').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 var foco = document.getElementById('f-disciplina');
                 if (foco) { foco.focus(); }
-                slot.classList.add('slot-selecionado');
-                setTimeout(function () { slot.classList.remove('slot-selecionado'); }, 900);
             }
             slot.addEventListener('click', preencher);
             slot.addEventListener('keydown', function (ev) {

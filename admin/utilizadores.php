@@ -224,8 +224,8 @@ require_once __DIR__ . '/../includes/header.php';
             </p>
 
             <div class="campo" style="margin-top:15px">
-                <label>Cursos que gere (só para Coordenador)</label>
-                <div class="grelha-checkboxes" style="border:1px solid var(--line);border-radius:1px;padding:12px;background:var(--surface)">
+                <span class="campo-rotulo" id="rot-cursos-geridos">Cursos que gere (só para Coordenador)</span>
+                <div class="grelha-checkboxes" role="group" aria-labelledby="rot-cursos-geridos" style="border:1px solid var(--line);border-radius:1px;padding:12px;background:var(--surface)">
                     <?php foreach ($cursos as $c): ?>
                     <label>
                         <input type="checkbox" name="cursos[]" value="<?= $c['id'] ?>"

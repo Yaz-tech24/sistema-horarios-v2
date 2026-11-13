@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $docente) {
     } elseif (mb_strlen($mensagem) < 10) {
         definirFlash('erro', 'Explica o problema em pelo menos 10 caracteres, para o coordenador perceber.');
     } else {
-        $referencia = $aulaPedido['dia_semana'] . ' ' . $aulaPedido['hi'] . '–' . $aulaPedido['hf']
+        $referencia = rotuloDia($aulaPedido['dia_semana']) . ' ' . $aulaPedido['hi'] . '–' . $aulaPedido['hf']
             . ' · ' . ($aulaPedido['disciplina'] ?? 'bloco')
             . ' (' . $aulaPedido['curso'] . ' ' . $aulaPedido['ano_curricular'] . 'º)';
         $pdo->prepare(
@@ -133,7 +133,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="tabela-grelha-scroll">
 <table class="tabela-grelha">
-    <thead><tr><th class="col-hora">Hora</th><?php foreach (DIAS_SEMANA as $d): ?><th><?= $d ?></th><?php endforeach; ?></tr></thead>
+    <thead><tr><th class="col-hora">Hora</th><?php foreach (DIAS_SEMANA as $d): ?><th><?= rotuloDia($d) ?></th><?php endforeach; ?></tr></thead>
     <tbody>
     <?php foreach (BLOCOS_HORARIOS as [$hi, $hf]): ?>
     <tr>
@@ -170,7 +170,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <option value="">— escolher —</option>
                         <?php foreach ($aulas as $a): ?>
                         <option value="<?= $a['id'] ?>">
-                            <?= htmlspecialchars($a['dia_semana']) ?> <?= substr($a['hora_inicio'],0,5) ?> ·
+                            <?= htmlspecialchars(rotuloDia($a['dia_semana'])) ?> <?= substr($a['hora_inicio'],0,5) ?> ·
                             <?= htmlspecialchars($a['disciplina'] ?? 'bloco') ?>
                             (<?= htmlspecialchars($a['curso']) ?> <?= $a['ano_curricular'] ?>º)
                         </option>

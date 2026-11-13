@@ -40,6 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$email]);
             $conta = $stmt->fetch();
 
+            // Links usados ou expirados há mais de 30 dias já não servem para
+            // nada — a tabela não cresce para sempre.
+            $pdo->exec("DELETE FROM recuperacoes_senha WHERE expira_em < DATE_SUB(NOW(), INTERVAL 30 DAY)");
+
             if ($conta) {
                 $stmt = $pdo->prepare(
                     "SELECT COUNT(*) FROM recuperacoes_senha

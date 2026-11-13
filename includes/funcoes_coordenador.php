@@ -112,6 +112,18 @@ function removerBlocos(PDO $pdo, int $horarioId, array $aulaIds): void {
 }
 
 const DIAS_SEMANA = ['Segunda','Terca','Quarta','Quinta','Sexta'];
+
+/* Nomes para MOSTRAR (com acentos). A base de dados guarda os valores sem
+   acentos (ENUMs 'Terca', 'Manha', 'Pos-Laboral', 'Em_Revisao'…) e é isso
+   que continua a ir nos formulários e nas consultas — estas funções só
+   servem para o texto que as pessoas leem. */
+function rotuloDia(?string $d): string { return ['Terca' => 'Terça'][$d] ?? (string)$d; }
+function rotuloTurno(?string $t): string { return ['Manha' => 'Manhã'][$t] ?? (string)$t; }
+function rotuloRegime(?string $r): string { return ['Pos-Laboral' => 'Pós-Laboral'][$r] ?? (string)$r; }
+function rotuloEstado(?string $e): string { return ['Em_Revisao' => 'Em revisão'][$e] ?? (string)$e; }
+function rotuloTipoBloco(?string $t): string {
+    return ['Estudo_Autonomo' => 'Estudo Autónomo', 'Atividade_Nao_Letiva' => 'Atividade Não Letiva'][$t] ?? (string)$t;
+}
 const BLOCOS_HORARIOS = [
     ['07:00','08:40'], ['08:45','10:25'], ['10:30','12:10'],
     ['12:30','14:10'], ['14:15','15:55'], ['16:05','17:45'],
@@ -216,177 +228,7 @@ function salasCandidatas(array $salas, array $turma, array $disc, ?int $salaForc
     return $ids;
 }
 
-/* Geração automática do horário de uma turma a partir das disciplinas do
-   curso+ano. Nunca reimplementa deteção de conflitos: cada slot candidato
-   passa sempre por verificarConflitos() (definida em funcoes_conflitos.php
-   — tem de estar incluída antes de esta função ser CHAMADA, não definida).
-   Não escreve por cima de aulas já existentes; $limparPrimeiro é uma ação
-   à parte, explícita, para recomeçar do zero.
-   $salaForcada: quando indicada, todas as aulas geradas usam sempre essa
-   sala (ex.: a sala fixa da turma) em vez da escolha automática por
-   capacidade — continua sujeita ao RN02 (conflito de sala) como qualquer
-   outra, por isso um slot com essa sala já ocupada simplesmente é
-   ignorado, tal como acontecia antes. */
-function gerarHorarioAutomatico(PDO $pdo, array $horario, array $turma, array $curso, bool $limparPrimeiro = false, ?int $salaForcada = null): array {
-    if ($limparPrimeiro) {
-        $pdo->prepare(
-            "DELETE FROM conflitos WHERE aula_id_1 IN (SELECT id FROM aulas WHERE horario_id=?)
-                                       OR aula_id_2 IN (SELECT id FROM aulas WHERE horario_id=?)")
-            ->execute([$horario['id'], $horario['id']]);
-        // Aulas de um horário já Publicado podem ter notificações antigas
-        // ligadas por aula_id ("Foi-te atribuída uma nova aula..."). Sem
-        // isto, o DELETE seguinte falhava por violação de chave
-        // estrangeira (notificacoes.aula_id → aulas.id) sempre que havia
-        // pelo menos uma notificação por resolver.
-        $pdo->prepare(
-            "UPDATE notificacoes SET aula_id = NULL
-             WHERE aula_id IN (SELECT id FROM aulas WHERE horario_id=?)")
-            ->execute([$horario['id']]);
-        // O mesmo para os pedidos dos docentes (pedidos.aula_id → aulas.id):
-        // bastava um docente ter assinalado um problema numa aula deste
-        // horário para "Limpar tudo e gerar de novo" falhar. O pedido fica
-        // (com o texto de referência), só perde a ligação à aula apagada.
-        $pdo->prepare(
-            "UPDATE pedidos SET aula_id = NULL
-             WHERE aula_id IN (SELECT id FROM aulas WHERE horario_id=?)")
-            ->execute([$horario['id']]);
-        $pdo->prepare("DELETE FROM aulas WHERE horario_id=?")->execute([$horario['id']]);
-        registarHistorico($pdo, (int)$horario['id'], "Horário limpo antes de gerar automaticamente");
-    }
-
-    garantirPastoral($pdo, $horario, $turma);
-
-    $blocos = blocosDoTurno($turma['turno']);
-
-    // Slots livres = todos os (dia, bloco) do turno da turma, exceto os
-    // já ocupados (incluindo a Pastoral, já garantida acima).
-    $stmt = $pdo->prepare("SELECT dia_semana, hora_inicio, hora_fim FROM aulas WHERE horario_id=?");
-    $stmt->execute([$horario['id']]);
-    $ocupados = [];
-    foreach ($stmt->fetchAll() as $o) {
-        $ocupados[$o['dia_semana'] . '|' . substr($o['hora_inicio'], 0, 5) . '|' . substr($o['hora_fim'], 0, 5)] = true;
-    }
-    $slotsLivres = [];
-    foreach (DIAS_SEMANA as $d) {
-        foreach ($blocos as [$hi, $hf]) {
-            if (!isset($ocupados["$d|$hi|$hf"])) { $slotsLivres[] = [$d, $hi, $hf]; }
-        }
-    }
-
-    $stmt = $pdo->prepare("SELECT * FROM disciplinas WHERE curso_id=? AND ano_curricular=? ORDER BY nome");
-    $stmt->execute([$curso['id'], $turma['ano_curricular']]);
-    $disciplinas = $stmt->fetchAll();
-    $salas = $pdo->query("SELECT * FROM salas ORDER BY capacidade, id")->fetchAll();
-
-    $insAula = $pdo->prepare(
-        "INSERT INTO aulas (horario_id, disciplina_id, docente_id, docente_regente_id, docente_assistente_id,
-            sala_id, tipo_bloco, dia_semana, hora_inicio, hora_fim)
-         VALUES (?,?,?,?,?,?,'Aula',?,?,?)");
-
-    $criadas = 0;
-    $naoAlocadas = [];
-    $avisos = [];
-
-    foreach ($disciplinas as $disc) {
-        if (empty($disc['docente_regente_id'])) {
-            $naoAlocadas[] = $disc['nome'] . ' (sem docente regente definido)';
-            continue;
-        }
-
-        $sessoesNecessarias = max(1, min(2, (int)$disc['carga_horaria']));
-        $stmt = $pdo->prepare(
-            "SELECT dia_semana FROM aulas WHERE horario_id=? AND disciplina_id=? AND tipo_bloco='Aula'");
-        $stmt->execute([$horario['id'], $disc['id']]);
-        $diasUsados = array_column($stmt->fetchAll(), 'dia_semana');
-        $sessoesRestantes = $sessoesNecessarias - count($diasUsados);
-        $candidatasSala = salasCandidatas($salas, $turma, $disc, $salaForcada);
-
-        for ($i = 0; $i < $sessoesRestantes; $i++) {
-            $alocado = false;
-
-            foreach ($slotsLivres as $idx => [$d, $hi, $hf]) {
-                if (in_array($d, $diasUsados, true)) { continue; } // RN09: nunca 2x no mesmo dia
-
-                $candidato = [
-                    'horario_id' => (int)$horario['id'], 'turma_id' => (int)$turma['id'],
-                    'tipo_bloco' => 'Aula', 'disciplina_id' => (int)$disc['id'],
-                    'docente_id' => (int)$disc['docente_regente_id'],
-                    'docente_regente_id' => (int)$disc['docente_regente_id'],
-                    'docente_assistente_id' => $disc['docente_assistente_id'] ? (int)$disc['docente_assistente_id'] : null,
-                    'sala_id' => null, 'subgrupo' => null,
-                    'dia_semana' => $d, 'hora_inicio' => $hi, 'hora_fim' => $hf,
-                ];
-
-                // Experimenta as salas pela ordem de preferência. Antes era
-                // sempre a mesma sala (a primeira com lugares): se estivesse
-                // ocupada nesse bloco, o bloco era saltado, mesmo havendo
-                // outras salas livres — com várias turmas, todas disputavam
-                // a mesma sala e as disciplinas ficavam "por agendar".
-                $problemas = null;
-                foreach ($candidatasSala as $salaTentada) {
-                    $candidato['sala_id'] = $salaTentada;
-                    $tentativa = verificarConflitos($pdo, $candidato);
-                    $bloqueantes = array_filter($tentativa, fn($p) => $p['bloqueante']);
-                    if (!$bloqueantes) { $problemas = $tentativa; break; }
-                    // Docente ocupado, turma ocupada, carga (RN09)… — mudar de
-                    // sala não resolve; passa ao bloco seguinte.
-                    if (array_filter($bloqueantes, fn($p) => $p['tipo'] !== 'Sala')) { break; }
-                }
-                if ($problemas === null) { continue; }
-                $salaId = $candidato['sala_id'];
-
-                $insAula->execute([
-                    $horario['id'], $disc['id'], $candidato['docente_id'], $candidato['docente_regente_id'],
-                    $candidato['docente_assistente_id'], $salaId, $d, $hi, $hf,
-                ]);
-
-                // Capacidade/Disponibilidade não bloqueiam a geração automática
-                // (ao contrário do editor manual, aqui não há ninguém para
-                // confirmar "gravar mesmo assim") — por isso ficam pelo menos
-                // visíveis no resumo, em vez de silenciosamente ignoradas.
-                foreach (array_filter($problemas, fn($p) => !$p['bloqueante']) as $p) {
-                    $avisos[] = "{$disc['nome']} ($d {$hi}–{$hf}): {$p['mensagem']}";
-                }
-
-                unset($slotsLivres[$idx]);
-                $diasUsados[] = $d;
-                $criadas++;
-                $alocado = true;
-                break;
-            }
-
-            if (!$alocado) {
-                // Quando a disciplina tem laboratório fixo (RN16), a causa mais
-                // provável é o laboratório estar ocupado por outro curso nesses
-                // horários — dizê-lo poupa a investigação ao coordenador.
-                $motivo = '';
-                if (!empty($disc['sala_id'])) {
-                    $stmtSala = $pdo->prepare("SELECT nome FROM salas WHERE id = ?");
-                    $stmtSala->execute([$disc['sala_id']]);
-                    if ($nomeSala = $stmtSala->fetchColumn()) {
-                        $motivo = " (o laboratório \"$nomeSala\" está ocupado nos blocos livres desta turma)";
-                    }
-                }
-                $naoAlocadas[] = $disc['nome'] . $motivo;
-                break;
-            }
-        }
-    }
-
-    // O que sobrar dentro do turno preenche-se com Estudo Autónomo.
-    $insEstudo = $pdo->prepare(
-        "INSERT INTO aulas (horario_id, tipo_bloco, dia_semana, hora_inicio, hora_fim)
-         VALUES (?, 'Estudo_Autonomo', ?, ?, ?)");
-    $preenchidasEstudo = 0;
-    foreach ($slotsLivres as [$d, $hi, $hf]) {
-        $insEstudo->execute([$horario['id'], $d, $hi, $hf]);
-        $preenchidasEstudo++;
-    }
-
-    iniciarRevisaoSeRascunho($pdo, $horario);
-    registarHistorico($pdo, (int)$horario['id'],
-        "Geração automática: $criadas aula(s) criada(s), $preenchidasEstudo bloco(s) de Estudo Autónomo"
-        . ($naoAlocadas ? ', ' . count($naoAlocadas) . ' disciplina(s) por agendar' : ''));
-
-    return ['criadas' => $criadas, 'estudo' => $preenchidasEstudo, 'nao_alocadas' => $naoAlocadas, 'avisos' => $avisos];
-}
+/* A geração automática (gerarHorarioAutomatico, gerarHorariosDoCurso) vive
+   em gerador_horarios.php — usa as funções acima e verificarConflitos()
+   (funcoes_conflitos.php), que tem de estar incluída antes de a CHAMAR. */
+require_once __DIR__ . '/gerador_horarios.php';

@@ -1,0 +1,3 @@
+# Scripts de shell correm na VPS (Linux): sempre com fins de linha LF,
+# mesmo quando o repositório é clonado/editado no Windows.
+*.sh text eol=lf

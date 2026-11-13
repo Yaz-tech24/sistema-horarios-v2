@@ -10,6 +10,8 @@ iniciar_sistema.bat
 # precisa diretamente do disco, e as migrações correm a partir do anfitrião
 # (ver README) — os seeds com contas de teste nunca ficam dentro do site.
 sql
+scripts
+backups
 README.md
 docker-compose.yml
 Dockerfile

@@ -66,8 +66,23 @@ function aulasDaTurma(PDO $pdo, int $turmaId): array {
     return $stmt->fetchAll();
 }
 
+/* Estado do horário que está a ser exportado. A exportação mostra também
+   rascunhos (para o coordenador rever no papel) — sem isto, uma folha
+   impressa de um rascunho passava facilmente por horário oficial. */
+function estadoParaExportar(PDO $pdo, array $t): string {
+    $stmt = $pdo->prepare(
+        "SELECT estado, data_publicacao FROM horarios WHERE turma_id = ? AND estado != 'Arquivado' ORDER BY id DESC LIMIT 1");
+    $stmt->execute([(int)$t['id']]);
+    $h = $stmt->fetch();
+    if (!$h) { return 'Sem horário'; }
+    if ($h['estado'] === 'Publicado') {
+        return 'Horário publicado' . ($h['data_publicacao'] ? ' em ' . date('d/m/Y', strtotime($h['data_publicacao'])) : '');
+    }
+    return 'RASCUNHO — ainda não publicado, não é o horário oficial';
+}
+
 function nomeTurma(array $t): string {
-    return $t['sigla'] . ' ' . $t['ano_curricular'] . 'º Ano (' . $t['regime'] . ', Turma ' . $t['nome_turma'] . ')';
+    return $t['sigla'] . ' ' . $t['ano_curricular'] . 'º Ano (' . rotuloRegime($t['regime']) . ', Turma ' . $t['nome_turma'] . ')';
 }
 
 /* Neutraliza "CSV/Formula Injection": nomes de disciplina/docente/sala são
@@ -87,7 +102,7 @@ function celulaCsvSegura(?string $valor): string {
    de uma única célula. */
 function celulaAulaTexto(array $a): string {
     if ($a['tipo_bloco'] !== 'Aula') {
-        return str_replace('_', ' ', $a['tipo_bloco']);
+        return rotuloTipoBloco($a['tipo_bloco']);
     }
     $titulo = $a['disciplina'] ?? '—';
     if (!empty($a['subgrupo'])) { $titulo .= " (Subgrupo {$a['subgrupo']})"; }
@@ -122,7 +137,7 @@ if (($_GET['formato'] ?? '') === 'csv') {
             $primeiraTurma = false;
 
             fputcsv($out, [celulaCsvSegura(nomeTurma($t) . ' — ' . $t['curso_nome'])], ';');
-            fputcsv($out, ['Turno: ' . str_replace(['Manha','Tarde'], ['Manhã','Tarde'], $t['turno'])
+            fputcsv($out, ['Turno: ' . rotuloTurno($t['turno']) . ' · ' . estadoParaExportar($pdo, $t)
                 . ' · Gerado em ' . date('d/m/Y H:i')], ';');
 
             $grelha = [];
@@ -130,7 +145,7 @@ if (($_GET['formato'] ?? '') === 'csv') {
                 $grelha[$a['dia_semana']][substr($a['hora_inicio'], 0, 5)][] = $a;
             }
 
-            fputcsv($out, array_merge(['Hora'], DIAS_SEMANA), ';');
+            fputcsv($out, array_merge(['Hora'], array_map('rotuloDia', DIAS_SEMANA)), ';');
             foreach (blocosDoTurno($t['turno']) as [$hi, $hf]) {
                 $linha = [$hi . '–' . $hf];
                 foreach (DIAS_SEMANA as $d) {
@@ -166,11 +181,11 @@ function grelhaImpressao(PDO $pdo, array $t): void {
         <div class="card">
             <div class="card-header">
                 <div><span class="brand-mark" style="display:inline-grid;margin-bottom:8px">UCM</span><h2 style="margin:0"><?= htmlspecialchars(nomeTurma($t)) ?></h2>
-                <p><?= htmlspecialchars($t['curso_nome']) ?> · Turno: <?= str_replace(['Manha','Tarde'], ['Manhã','Tarde'], $t['turno']) ?> · Gerado em <?= date('d/m/Y H:i') ?></p></div>
+                <p><?= htmlspecialchars($t['curso_nome']) ?> · Turno: <?= rotuloTurno($t['turno']) ?> · <strong><?= htmlspecialchars(estadoParaExportar($pdo, $t)) ?></strong> · Gerado em <?= date('d/m/Y H:i') ?></p></div>
             </div>
             <div class="tabela-grelha-scroll">
             <table class="tabela-grelha">
-                <thead><tr><th class="col-hora">Hora</th><?php foreach (DIAS_SEMANA as $d): ?><th><?= $d ?></th><?php endforeach; ?></tr></thead>
+                <thead><tr><th class="col-hora">Hora</th><?php foreach (DIAS_SEMANA as $d): ?><th><?= rotuloDia($d) ?></th><?php endforeach; ?></tr></thead>
                 <tbody>
                 <?php foreach ($blocosGrelha as [$hi, $hf]): ?>
                 <tr>
@@ -184,7 +199,7 @@ function grelhaImpressao(PDO $pdo, array $t): void {
                                 <small>Regente: <?= htmlspecialchars($a['regente'] ?? $a['docente'] ?? '—') ?><?php if ($a['assistente']): ?> · Assist.: <?= htmlspecialchars($a['assistente']) ?><?php endif; ?></small>
                                 <small><?= htmlspecialchars($a['sala'] ?? '—') ?></small>
                             <?php else: ?>
-                                <em><?= str_replace('_',' ',$a['tipo_bloco']) ?></em>
+                                <em><?= rotuloTipoBloco($a['tipo_bloco']) ?></em>
                             <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
@@ -211,7 +226,7 @@ function grelhaImpressao(PDO $pdo, array $t): void {
                     <option value="">— escolher —</option>
                     <?php foreach ($turmas as $t): ?>
                     <option value="<?= $t['id'] ?>" <?= ($t['id']==$turmaId)?'selected':'' ?>>
-                        <?= htmlspecialchars($t['sigla']) ?> · <?= (int)$t['ano_curricular'] ?>º · <?= htmlspecialchars($t['regime']) ?> · <?= htmlspecialchars($t['nome_turma']) ?>
+                        <?= htmlspecialchars($t['sigla']) ?> · <?= (int)$t['ano_curricular'] ?>º · <?= htmlspecialchars(rotuloRegime($t['regime'])) ?> · <?= htmlspecialchars($t['nome_turma']) ?>
                     </option>
                     <?php endforeach; ?>
                 </select>

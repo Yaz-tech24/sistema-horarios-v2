@@ -154,6 +154,24 @@ negar tudo. Só funcionam com `AllowOverride All` (já está no VirtualHost
 acima) — confirma abrindo `https://o-teu-dominio/sql/schema.sql` e
 `https://o-teu-dominio/.env`: as duas têm de dar 403/404, nunca o ficheiro.
 
+## Cópias de segurança da base de dados
+
+`scripts/backup_bd.sh` faz uma cópia comprimida da base de dados (com
+Docker ou com o MySQL instalado diretamente) e guarda as últimas 30, por
+omissão em `/var/backups/horarios` — **fora** da pasta do site. Para correr
+todos os dias às 02:00 (`crontab -e`, como root):
+
+```bash
+0 2 * * * cd /opt/sistema-horarios-v2 && sh scripts/backup_bd.sh >> /var/log/horarios-backup.log 2>&1
+```
+
+`BACKUP_DIR` e `BACKUP_MANTER` (no `.env` ou no ambiente) mudam a pasta e o
+número de cópias guardadas. Uma cópia vazia (ex.: palavra-passe errada) é
+recusada e o script termina com erro. Copia regularmente
+`/var/backups/horarios` para **outra máquina** — uma cópia no mesmo disco não
+salva nada se a VPS se perder. Como repor uma cópia está no início do
+próprio script.
+
 ## Envio de email aos docentes (opcional)
 
 Quando um coordenador publica um horário, além da notificação interna (que
@@ -334,7 +352,9 @@ O que é comum a todas as páginas está em `includes/seguranca.php`.
 3. Entrar com o Administrador de origem e definir a palavra-passe nova.
 4. HTTPS ativo (certbot ou Traefik) e, se houver proxy, `PROXY_CONFIAVEL=1`.
 5. `https://o-teu-dominio/.env` e `/sql/schema.sql` a dar 403/404.
-6. Numa base de dados que já existia: correr `sql/migracao_seguranca_v2.sql`
+6. Cópias de segurança diárias configuradas (`scripts/backup_bd.sh`, ver acima)
+   e uma cópia reposta pelo menos uma vez, para confirmar que funciona.
+7. Numa base de dados que já existia: correr `sql/migracao_seguranca_v2.sql`
    e `sql/migracao_limpeza_blocos.sql` (ou só `sql/atualizar_producao_vps.sql`,
    em Docker, que inclui as duas) e depois **Admin → Conflitos → Revalidar
    todos os horários**.
@@ -350,7 +370,10 @@ O que é comum a todas as páginas está em `includes/seguranca.php`.
   (criar/editar, incluindo quem é o docente regente e o assistente) → editor
   de horário em grelha com verificação de conflitos (RN01-RN04) →
   conflitos/revalidação → publicação (RN15: zero conflitos) → histórico,
-  mais os **pedidos dos docentes** sobre os horários do curso.
+  mais os **pedidos dos docentes** sobre os horários do curso (ao marcar um
+  pedido como resolvido, o docente é avisado, com uma resposta opcional).
+  As exportações de um horário ainda não publicado saem marcadas como
+  RASCUNHO, para não passarem por horário oficial.
 - **Docente**: horário agregado de todos os cursos, notificações e envio de
   pedidos ao coordenador sobre uma aula concreta.
 - **Todos os perfis**: **A minha conta** — dados de acesso e alteração da
@@ -390,6 +413,14 @@ aula da turma inteira.
 O subgrupo aparece entre parênteses na grelha do editor, no horário do
 docente, na folha impressa e no CSV.
 
+### Editor de horário — onde fica a página
+"editar" num bloco ou um clique num quadrado vazio abrem o formulário **por
+cima da grelha**, sem levar a página para o topo (Esc ou Cancelar fecha).
+Depois de gravar, a página volta à grelha, já na aula gravada (que pisca),
+com a confirmação num aviso no canto. Se não gravar (conflito, aviso de
+capacidade), o formulário reabre por cima, com a mensagem lá dentro e os
+valores que se tinham escrito.
+
 ### Blocos no mesmo dia e hora
 - Marcar uma **aula da turma inteira** num bloco que tem **Estudo Autónomo**
   substitui-o (o Estudo Autónomo é só o preenchimento dos blocos livres); a
@@ -399,12 +430,41 @@ docente, na folha impressa e no CSV.
   inteira, nem nada por cima de uma Atividade Não Letiva (incluindo a
   Pastoral) — o editor diz porquê.
 
-### Geração automática — escolha de sala
-Para cada aula, experimenta as salas por esta ordem até encontrar uma livre:
-a sala habitual da turma (é só sugestão), depois as salas onde a turma cabe,
-das mais pequenas para as maiores, preferindo salas normais a auditórios e a
+### Geração automática (`includes/gerador_horarios.php`)
+Em vez de colocar as disciplinas por ordem alfabética no primeiro bloco que
+servisse, o gerador faz uma **procura completa** das arrumações possíveis:
+- começa pela disciplina com menos alternativas (ex.: o docente que só está
+  livre em dois blocos) e volta atrás quando um caminho não leva a lado
+  nenhum;
+- fica com a arrumação que coloca **mais sessões** e, entre essas, a mais
+  equilibrada: aulas espalhadas pela semana, sem buracos a meio do dia,
+  docentes com no máximo 3 aulas no mesmo dia, as duas sessões de uma
+  disciplina bem espaçadas (RN09 continua obrigatória);
+- cada aula escolhida passa ainda pelo motor de conflitos antes de ser
+  gravada;
+- o **Estudo Autónomo é refeito** a cada geração (é só preenchimento): depois
+  de corrigir uma disciplina, basta voltar a carregar em **Gerar
+  automaticamente** — as aulas marcadas à mão mantêm-se;
+- o resumo diz, para cada disciplina incompleta, **porquê** (docente ocupado
+  noutras turmas, laboratório ocupado, docente só livre em dias seguidos, mais
+  sessões do que blocos no turno, sem regente) e quantas sessões ficaram
+  (ex.: "1 de 2 sessões").
+
+**Gerar todas as turmas do curso** (botão no editor): gera de uma vez as
+turmas que ainda não têm horário publicado, experimentando várias ordens
+entre turmas (as do mesmo ano partilham os docentes) e gravando a que coloca
+mais sessões. As turmas já publicadas não são tocadas.
+
+Salas: experimenta por esta ordem até encontrar uma livre — a sala habitual
+da turma (é só sugestão), depois as salas onde a turma cabe, das mais
+pequenas para as maiores, preferindo salas normais a auditórios e a
 laboratórios. O laboratório de uma disciplina prática (RN16) e a sala fixa
 escolhida no formulário de geração continuam a ser obrigatórios.
+
+Nos dados reais (`seed3`, 29 turmas), o gerador antigo deixava 11
+disciplinas incompletas; o novo deixa 3, que são impossíveis (o 1º ano de
+Direito pede 16 sessões semanais e o turno só tem 14/15 blocos — o resumo
+diz isso). Gerar um curso inteiro demora 1–2 segundos.
 
 ### Alterações que mexem num horário existente
 - Curso, ano e regime de uma **turma** com aulas marcadas não podem mudar

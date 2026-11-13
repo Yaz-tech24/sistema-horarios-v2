@@ -68,7 +68,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <h3><?= htmlspecialchars($c['tipo']) ?> — <?= htmlspecialchars($c['disc1'] ?? 'Aula') ?></h3>
                     <p><?= htmlspecialchars($c['mensagem'] ?? $descricaoGenerica($c)) ?></p>
                     <div class="conflict-meta">
-                        <span class="badge badge-info"><?= htmlspecialchars($c['dia_semana']) ?></span>
+                        <span class="badge badge-info"><?= htmlspecialchars(rotuloDia($c['dia_semana'])) ?></span>
                         <span class="badge badge-info"><?= substr($c['hora_inicio'],0,5) ?>–<?= substr($c['hora_fim'],0,5) ?></span>
                         <a class="btn btn-secondary btn-sm" href="<?= BASE_URL ?>/coordenador/editor_horario.php">Corrigir no editor</a>
                     </div>
@@ -90,7 +90,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <p><?= htmlspecialchars($c['mensagem'] ?? $descricaoGenerica($c)) ?></p>
                     <div class="conflict-meta">
                         <span class="badge badge-success"><span class="status-dot"></span>Resolvido</span>
-                        <span class="badge badge-info"><?= htmlspecialchars($c['dia_semana']) ?></span>
+                        <span class="badge badge-info"><?= htmlspecialchars(rotuloDia($c['dia_semana'])) ?></span>
                         <span class="badge badge-info"><?= substr($c['hora_inicio'],0,5) ?>–<?= substr($c['hora_fim'],0,5) ?></span>
                     </div>
                 </div>

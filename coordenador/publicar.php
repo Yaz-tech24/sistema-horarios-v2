@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['publicar']) || isset
 if ($f = lerFlash()) { ${$f['tipo']} = $f['texto']; }
 
 $pageTitle = 'Publicar horário';
-$pageDescription = 'Curso ' . $curso['sigla'] . ' — estado atual: ' . str_replace('_', ' ', $horario['estado']) . '.';
+$pageDescription = 'Curso ' . $curso['sigla'] . ' — estado atual: ' . rotuloEstado($horario['estado']) . '.';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -96,7 +96,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="grid two-column">
     <section class="card">
-        <div class="card-header"><div><h2>Resumo da publicação</h2><p><?= htmlspecialchars($curso['sigla']) ?> — estado <?= str_replace('_',' ', $horario['estado']) ?></p></div></div>
+        <div class="card-header"><div><h2>Resumo da publicação</h2><p><?= htmlspecialchars($curso['sigla']) ?> — estado <?= rotuloEstado($horario['estado']) ?></p></div></div>
         <div class="card-body">
             <?php if ($horario['estado'] === 'Arquivado'): ?>
                 <p style="margin:0;color:var(--ink-soft);font-size:.88rem">Este horário está arquivado e já não pode ser alterado nem publicado novamente.
@@ -132,7 +132,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card-body activity-list">
             <div class="activity-item"><span class="activity-dot <?= $nAulas > 0 ? 'teal' : 'orange' ?>"></span><strong>Aulas marcadas</strong><p><?= $nAulas ?> aula(s) neste horário</p></div>
             <div class="activity-item"><span class="activity-dot <?= $nConf === 0 ? 'teal' : 'orange' ?>"></span><strong>Conflitos pendentes</strong><p><?= $nConf ?> conflito(s) bloqueante(s)</p></div>
-            <div class="activity-item"><span class="activity-dot <?= $horario['estado'] === 'Publicado' ? 'teal' : '' ?>"></span><strong>Publicação</strong><p>Estado: <?= str_replace('_',' ', $horario['estado']) ?></p></div>
+            <div class="activity-item"><span class="activity-dot <?= $horario['estado'] === 'Publicado' ? 'teal' : '' ?>"></span><strong>Publicação</strong><p>Estado: <?= rotuloEstado($horario['estado']) ?></p></div>
             <?php if ($horario['data_publicacao']): ?>
             <div class="activity-item"><span class="activity-dot teal"></span><strong>Publicado em</strong><p><?= htmlspecialchars($horario['data_publicacao']) ?></p></div>
             <?php endif; ?>

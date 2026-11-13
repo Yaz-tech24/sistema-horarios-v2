@@ -37,7 +37,7 @@ function subgruposSobrepoem(?string $a, ?string $b): bool {
 
 function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): array {
     $problemas = [];
-    $diaCand = $aula['dia_semana'] ?? '';
+    $diaCand = rotuloDia($aula['dia_semana'] ?? '');
     $hiCand  = substr($aula['hora_inicio'] ?? '', 0, 5);
     $hfCand  = substr($aula['hora_fim'] ?? '', 0, 5);
     $quandoCand = trim("$diaCand $hiCand" . ($hfCand ? "–$hfCand" : ''));
@@ -124,10 +124,10 @@ function verificarConflitos(PDO $pdo, array $aula, ?int $ignorarAulaId = null): 
 
         if ($mesmoDia) {
             $problemas[] = ['tipo' => 'Carga', 'bloqueante' => true, 'outra_aula_id' => (int)$mesmoDia['id'],
-                'mensagem' => "\"$nomeDisc\" já está marcada este dia ({$aula['dia_semana']}) — escolhe outro dia para a próxima sessão."];
+                'mensagem' => "\"$nomeDisc\" já está marcada este dia (" . rotuloDia($aula['dia_semana']) . ") — escolhe outro dia para a próxima sessão."];
         } elseif ($diaAdjacente) {
             $problemas[] = ['tipo' => 'Carga', 'bloqueante' => true, 'outra_aula_id' => (int)$diaAdjacente['id'],
-                'mensagem' => "\"$nomeDisc\" já está marcada em {$diaAdjacente['dia_semana']} — tem de haver pelo menos um dia de intervalo entre as duas sessões (não pode ser em dias consecutivos)."];
+                'mensagem' => "\"$nomeDisc\" já está marcada à " . rotuloDia($diaAdjacente['dia_semana']) . " — tem de haver pelo menos um dia de intervalo entre as duas sessões (não pode ser em dias consecutivos)."];
         } elseif (count($existentes) >= $limite) {
             $subCand = normalizarSubgrupo($aula['subgrupo'] ?? null);
             $problemas[] = ['tipo' => 'Carga', 'bloqueante' => true, 'outra_aula_id' => (int)$existentes[0]['id'],

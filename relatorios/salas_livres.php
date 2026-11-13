@@ -89,7 +89,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <tr>
                     <th class="col-hora">Sala</th>
                     <?php foreach (DIAS_SEMANA as $d): ?>
-                        <th colspan="<?= count(BLOCOS_HORARIOS) ?>"><?= $d ?></th>
+                        <th colspan="<?= count(BLOCOS_HORARIOS) ?>"><?= rotuloDia($d) ?></th>
                     <?php endforeach; ?>
                 </tr>
                 <tr>
@@ -119,7 +119,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     </div>
                                 </td>
                             <?php else: ?>
-                                <td style="background:#EAEFF7" title="<?= htmlspecialchars($s['nome'] . ' livre — ' . $d . ' ' . $hi . '–' . $hf) ?>"></td>
+                                <td style="background:#EAEFF7" title="<?= htmlspecialchars($s['nome'] . ' livre — ' . rotuloDia($d) . ' ' . $hi . '–' . $hf) ?>"></td>
                             <?php endif; ?>
                         <?php endforeach; ?>
                     <?php endforeach; ?>

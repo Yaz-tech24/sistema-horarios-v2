@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $bloqueadoPorAulas = true;
                     $traduz = fn($t) => str_replace(['Manha','Tarde'], ['Manhã','Tarde'], $t);
                     $erro = "Não é possível mudar o curso, o ano ou o regime desta turma: o horário atual já tem aulas "
-                          . "marcadas para o " . (int)$antiga['ano_curricular'] . "º ano em regime " . $antiga['regime']
+                          . "marcadas para o " . (int)$antiga['ano_curricular'] . "º ano em regime " . rotuloRegime($antiga['regime'])
                           . " (turno da " . $traduz($antiga['turno']) . "). Arquiva o horário desta turma primeiro "
                           . "(Coordenador → Publicar → Arquivar) ou remove as aulas no Editor de Horário.";
                 }
@@ -151,12 +151,12 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="campo"><label>Regime</label>
                 <select class="form-control form-select" name="regime" id="f-regime">
                     <?php foreach (['Laboral','Pos-Laboral'] as $r): ?>
-                    <option <?= (($editar['regime'] ?? '')===$r)?'selected':'' ?>><?= $r ?></option>
+                    <option value="<?= $r ?>" <?= (($editar['regime'] ?? '')===$r)?'selected':'' ?>><?= rotuloRegime($r) ?></option>
                     <?php endforeach; ?>
                 </select></div>
-            <div class="campo"><label>Turno</label>
-                <p id="turno-calculado" class="badge badge-info" style="margin:0;padding:9px 12px;font-size:.84rem;">
-                    <?= str_replace(['Manha','Tarde'], ['Manhã','Tarde'], calcularTurno((int)($editar['ano_curricular'] ?? 1), $editar['regime'] ?? 'Laboral')) ?>
+            <div class="campo"><span class="campo-rotulo" id="rot-turno">Turno</span>
+                <p id="turno-calculado" class="badge badge-info" aria-labelledby="rot-turno" aria-live="polite" style="margin:0;padding:9px 12px;font-size:.84rem;">
+                    <?= rotuloTurno(calcularTurno((int)($editar['ano_curricular'] ?? 1), $editar['regime'] ?? 'Laboral')) ?>
                     <span style="font-weight:400;"> (calculado)</span>
                 </p>
             </div>
@@ -203,10 +203,10 @@ require_once __DIR__ . '/../includes/header.php';
             <tbody>
             <?php foreach ($turmas as $t): ?>
             <tr>
-                <td><div class="cell-main"><span class="cell-icon"><?= htmlspecialchars($t['sigla']) ?></span><span><strong><?= htmlspecialchars($t['sigla']) ?> — <?= $t['ano_curricular'] ?>º <?= htmlspecialchars($t['nome_turma']) ?></strong><small><?= htmlspecialchars($t['regime']) ?> · <?= htmlspecialchars($t['turno']) ?></small></span></div></td>
-                <td><?= $t['ano_curricular'] ?>º</td>
-                <td><?= htmlspecialchars($t['regime']) ?></td>
-                <td><?= htmlspecialchars($t['turno']) ?></td>
+                <td><div class="cell-main"><span class="cell-icon"><?= htmlspecialchars($t['sigla']) ?></span><span><strong><?= htmlspecialchars($t['sigla']) ?> — <?= $t['ano_curricular'] ?>º <?= htmlspecialchars($t['nome_turma']) ?></strong><small><?= htmlspecialchars(rotuloRegime($t['regime'])) ?> · <?= htmlspecialchars(rotuloTurno($t['turno'])) ?></small></span></div></td>
+                <td><?= (int)$t['ano_curricular'] ?>º</td>
+                <td><?= htmlspecialchars(rotuloRegime($t['regime'])) ?></td>
+                <td><?= htmlspecialchars(rotuloTurno($t['turno'])) ?></td>
                 <td><?= htmlspecialchars($t['nome_turma']) ?></td>
                 <td><?= $t['num_alunos'] ?></td>
                 <td><?= $t['sala_padrao_nome'] ? htmlspecialchars($t['sala_padrao_nome']) : '—' ?></td>
